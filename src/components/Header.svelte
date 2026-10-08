@@ -15,12 +15,8 @@
 
 <header class="w-full flex items-center justify-between mb-6">
   <div class="flex items-center gap-3">
-    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 flex items-center justify-center shadow-md shadow-sky-500/20 text-white font-bold text-lg">
-      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-        <polyline points="16 6 12 2 8 6"></polyline>
-        <line x1="12" y1="2" x2="12" y2="15"></line>
-      </svg>
+    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-100 flex items-center justify-center shadow-md shadow-sky-500/10 p-1 shrink-0 transition-transform hover:scale-105">
+      <img src="upload.png" alt="File Sharer" class="w-full h-full object-contain filter drop-shadow-sm select-none" />
     </div>
     <div>
       <h1 class="text-xl font-bold tracking-tight text-slate-900 leading-none">{t.appTitle}</h1>

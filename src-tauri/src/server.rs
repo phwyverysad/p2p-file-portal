@@ -12,6 +12,9 @@ use tower_http::cors::{Any, CorsLayer};
 use crate::registry::{FileRegistry, ShareItem};
 use crate::stream::build_stream_response;
 
+pub type ShareNotifier = Arc<dyn Fn(&str) + Send + Sync + 'static>;
+pub type FocusNotifier = Arc<dyn Fn() + Send + Sync + 'static>;
+
 #[derive(Clone)]
 pub struct AppState {
     pub registry: FileRegistry,
@@ -19,6 +22,8 @@ pub struct AppState {
     pub tunnel_url: Arc<RwLock<Option<String>>>,
     pub tunnel_status: Arc<RwLock<String>>, // "offline" | "starting" | "online" | "error"
     pub tunnel_error: Arc<RwLock<Option<String>>>,
+    pub on_share_added: Option<ShareNotifier>,
+    pub on_focus_requested: Option<FocusNotifier>,
 }
 
 #[derive(Serialize)]
@@ -355,10 +360,23 @@ async fn add_local_share_handler(
     {
         Ok(item) => {
             let dto = format_share_dto(item, &state);
+
+            // Notify GUI and bring window to front
+            if let Some(ref cb) = state.on_share_added {
+                cb(&payload.file_path);
+            }
+
             Ok((StatusCode::CREATED, Json(serde_json::json!({ "share": dto }))))
         }
         Err(err) => Err((StatusCode::BAD_REQUEST, err)),
     }
+}
+
+async fn focus_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    if let Some(ref cb) = state.on_focus_requested {
+        cb();
+    }
+    StatusCode::OK
 }
 
 async fn update_share_handler(
@@ -413,6 +431,7 @@ pub fn create_app(state: Arc<AppState>) -> Router {
         .route("/api/shares/:id", put(update_share_handler))
         .route("/api/shares/:id", delete(revoke_share_handler))
         .route("/api/status", get(status_handler))
+        .route("/api/app/focus", post(focus_handler))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)

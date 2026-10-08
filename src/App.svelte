@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import { listen } from '@tauri-apps/api/event';
   import Header from './components/Header.svelte';
   import UploadCard from './components/UploadCard.svelte';
   import SharesList from './components/SharesList.svelte';
@@ -20,7 +21,8 @@
     getAppSettings, 
     saveAppSettings,
     retryTunnel,
-    copyToClipboard
+    copyToClipboard,
+    getPendingShares
   } from './lib/api';
   import { I18N } from './lib/i18n';
 
@@ -74,11 +76,12 @@
     try {
       const newItem = await addLocalShare(path, title);
       shares = [newItem, ...shares];
-      showToast(I18N[settings.language].toastFileAdded);
-
       if (settings.autoCopy) {
         const link = newItem.shortUrl || newItem.publicUrl;
         await copyToClipboard(link);
+        showToast(I18N[settings.language].toastFileAddedAndCopied);
+      } else {
+        showToast(I18N[settings.language].toastFileAdded);
       }
     } catch (err: any) {
       console.error(err);
@@ -129,10 +132,33 @@
     }, 1500);
   }
 
-  onMount(() => {
-    loadData();
+  let unlistenShare: (() => void) | null = null;
 
-    // Poll status and shares every 3 seconds
+  onMount(async () => {
+    await loadData();
+
+    // 1. Process any pending files from right-click context menu (initial launch)
+    try {
+      const initialPending = await getPendingShares();
+      for (const filePath of initialPending) {
+        await handleAddFile(filePath);
+      }
+    } catch (e) {
+      console.warn('Pending shares fetch error:', e);
+    }
+
+    // 2. Listen to subsequent right-click share requests (while app is running)
+    try {
+      unlistenShare = await listen<string>('share-file-requested', async (event) => {
+        if (event.payload && typeof event.payload === 'string') {
+          await handleAddFile(event.payload);
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to attach share-file-requested listener:', e);
+    }
+
+    // 3. Poll status and shares every 3 seconds
     const interval = setInterval(async () => {
       try {
         serverStatus = await getStatus();
@@ -140,17 +166,18 @@
       } catch (e) {}
     }, 3000);
 
-    // Listen to Tauri single instance argument events
-    if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-      const { listen } = (window as any).__TAURI__.event;
-      listen('share-file-requested', async (event: any) => {
-        if (event.payload && typeof event.payload === 'string') {
-          await handleAddFile(event.payload);
-        }
-      });
-    }
+    return () => {
+      clearInterval(interval);
+      if (unlistenShare) {
+        unlistenShare();
+      }
+    };
+  });
 
-    return () => clearInterval(interval);
+  onDestroy(() => {
+    if (unlistenShare) {
+      unlistenShare();
+    }
   });
 </script>
 

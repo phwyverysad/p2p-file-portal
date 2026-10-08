@@ -36,3 +36,23 @@ fn test_windows_context_menu_registration() {
     #[cfg(target_os = "windows")]
     assert!(!is_context_menu_registered());
 }
+
+#[test]
+fn test_pending_shares_queue() {
+    use std::sync::{Arc, Mutex};
+    let queue = Arc::new(Mutex::new(vec!["C:\\test\\file1.txt".to_string()]));
+    
+    // Simulate reading pending shares
+    let items = {
+        let mut q = queue.lock().unwrap();
+        let list = q.clone();
+        q.clear();
+        list
+    };
+
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0], "C:\\test\\file1.txt");
+
+    // After read, queue should be empty
+    assert!(queue.lock().unwrap().is_empty());
+}

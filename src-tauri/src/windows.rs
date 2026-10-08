@@ -6,6 +6,7 @@ use winreg::RegKey;
 pub fn register_context_menu(exe_path: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
+        let clean_path = exe_path.strip_prefix(r"\\?\").unwrap_or(exe_path);
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         let shell_path = r"Software\Classes\*\shell";
         let (shell_key, _) = hkcu
@@ -17,18 +18,20 @@ pub fn register_context_menu(exe_path: &str) -> Result<(), String> {
             .map_err(|e| format!("Failed to create FileSharer key: {}", e))?;
 
         menu_key
-            .set_value("", &"แชร์ลิ้ง (Share Link)")
+            .set_value("", &"แชร์ลิ้ง")
             .map_err(|e| format!("Failed to set menu label: {}", e))?;
 
         menu_key
-            .set_value("Icon", &exe_path)
+            .set_value("Icon", &clean_path)
             .map_err(|e| format!("Failed to set menu icon: {}", e))?;
+
+        let _ = menu_key.set_value("Position", &"Top");
 
         let (cmd_key, _) = menu_key
             .create_subkey("command")
             .map_err(|e| format!("Failed to create command key: {}", e))?;
 
-        let cmd_string = format!("\"{}\" \"%1\"", exe_path);
+        let cmd_string = format!("\"{}\" \"%1\"", clean_path);
         cmd_key
             .set_value("", &cmd_string)
             .map_err(|e| format!("Failed to set command value: {}", e))?;

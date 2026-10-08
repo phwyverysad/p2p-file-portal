@@ -147,3 +147,15 @@ pub async fn retry_tunnel(state: State<'_, TauriAppState>) -> Result<(), String>
     });
     Ok(())
 }
+
+// 12. Get pending share files from launch args or second instance
+#[tauri::command]
+pub fn get_pending_shares(state: State<'_, TauriAppState>) -> Vec<String> {
+    if let Ok(mut pending) = state.pending_shares.lock() {
+        let items = pending.clone();
+        pending.clear();
+        items
+    } else {
+        Vec::new()
+    }
+}

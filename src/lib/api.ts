@@ -168,3 +168,10 @@ export async function copyToClipboard(text: string): Promise<void> {
     console.warn('Clipboard write error:', err);
   }
 }
+
+export async function getPendingShares(): Promise<string[]> {
+  if (isTauri) {
+    return await invoke<string[]>('get_pending_shares');
+  }
+  return [];
+}
