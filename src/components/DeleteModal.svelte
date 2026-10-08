@@ -25,6 +25,7 @@
 </script>
 
 {#if isOpen && item}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
   <div 
     class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
     on:click={handleBackdropClick}

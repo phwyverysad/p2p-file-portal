@@ -33,6 +33,7 @@
 </script>
 
 {#if isOpen && item}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
   <div 
     class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
     on:click={handleBackdropClick}
@@ -49,8 +50,9 @@
 
       <form on:submit={handleSubmit} class="p-5 space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">{t.labelTitle}</label>
+          <label for="edit-title" class="block text-xs font-bold text-slate-700 mb-1">{t.labelTitle}</label>
           <input 
+            id="edit-title"
             type="text" 
             bind:value={titleInput} 
             required 
@@ -59,8 +61,9 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">{t.labelDesc}</label>
+          <label for="edit-desc" class="block text-xs font-bold text-slate-700 mb-1">{t.labelDesc}</label>
           <textarea 
+            id="edit-desc"
             bind:value={descInput} 
             rows="2"
             class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 focus:bg-white text-slate-800 resize-none"
@@ -69,7 +72,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">{t.labelOriginalPath}</label>
+          <span class="block text-xs font-bold text-slate-500 mb-1">{t.labelOriginalPath}</span>
           <div class="text-[11px] font-mono bg-slate-50 border border-slate-200/80 p-2 rounded-lg text-slate-600 break-all select-all">
             {item.filePath}
           </div>

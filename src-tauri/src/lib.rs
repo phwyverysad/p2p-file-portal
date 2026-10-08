@@ -65,21 +65,8 @@ pub fn run() {
         app_settings: Arc::new(RwLock::new(app_settings)),
     };
 
-    // Spawn HTTP Web Server in background tokio thread
-    let server_state_clone = server_state.clone();
-    tokio::spawn(async move {
-        let app = create_app(server_state_clone);
-        let addr = format!("0.0.0.0:{}", port);
-        if let Ok(listener) = tokio::net::TcpListener::bind(&addr).await {
-            let _ = axum::serve(listener, app).await;
-        }
-    });
-
-    // Start Cloudflare Tunnel in background
-    let tunnel_mgr_clone = tunnel_manager.clone();
-    tokio::spawn(async move {
-        tunnel_mgr_clone.start(port).await;
-    });
+    let server_state_bg = server_state.clone();
+    let tunnel_mgr_bg = tunnel_manager.clone();
 
     tauri::Builder::default()
         .plugin(init_single_instance(|app, args, _cwd| {
@@ -98,7 +85,22 @@ pub fn run() {
             }
         }))
         .manage(tauri_state)
-        .setup(|app| {
+        .setup(move |app| {
+            // Spawn HTTP Web Server in background runtime
+            let s_state = server_state_bg;
+            tauri::async_runtime::spawn(async move {
+                let app_router = create_app(s_state);
+                let addr = format!("0.0.0.0:{}", port);
+                if let Ok(listener) = tokio::net::TcpListener::bind(&addr).await {
+                    let _ = axum::serve(listener, app_router).await;
+                }
+            });
+
+            // Start Cloudflare Tunnel in background
+            let t_mgr = tunnel_mgr_bg;
+            tauri::async_runtime::spawn(async move {
+                t_mgr.start(port).await;
+            });
             // Setup System Tray
             let quit_i = MenuItem::with_id(app, "quit", "ปิดโปรแกรม (Quit)", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "เปิดหน้าต่างหลัก (Open)", true, None::<&str>)?;
