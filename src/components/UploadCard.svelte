@@ -16,7 +16,9 @@
     try {
       const selected = await pickFileDialog();
       if (selected) {
-        localPathInput = selected;
+        await onAddFile(selected, customTitleInput.trim() || undefined);
+        localPathInput = '';
+        customTitleInput = '';
       }
     } catch (err) {
       console.error(err);
@@ -31,7 +33,7 @@
       const file = e.dataTransfer.files[0] as any;
       const filePath = file.path || file.name;
       if (filePath) {
-        await onAddFile(filePath, customTitleInput || undefined);
+        await onAddFile(filePath, customTitleInput.trim() || undefined);
         localPathInput = '';
         customTitleInput = '';
       }
