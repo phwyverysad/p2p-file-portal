@@ -1,0 +1,28 @@
+{
+  "name": "local-file-sharer",
+  "version": "1.0.0",
+  "description": "Instant Local File Sharing Desktop App built with Tauri v2 and Svelte 4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node build.js --watch",
+    "build": "node build.js",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-shell": "^2.2.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0",
+    "autoprefixer": "^10.4.20",
+    "esbuild": "^0.25.0",
+    "esbuild-svelte": "^0.9.0",
+    "postcss": "^8.5.1",
+    "svelte": "^4.2.19",
+    "svelte-preprocess": "^5.1.4",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  }
+}
