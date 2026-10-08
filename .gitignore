@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+target/
+
+# Build artifacts
+dist/
+dist-ssr/
+*.local
+
+# Data storage & logs
+data/
+uploads/
+*.log
+.worktrees/
+worktrees/
+
+# Tauri & OS artifacts
+src-tauri/target/
+.DS_Store
+Thumbs.db
