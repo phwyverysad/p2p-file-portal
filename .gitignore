@@ -13,6 +13,8 @@ uploads/
 *.log
 .worktrees/
 worktrees/
+bin/
+src-tauri/gen/
 
 # Tauri & OS artifacts
 src-tauri/target/
