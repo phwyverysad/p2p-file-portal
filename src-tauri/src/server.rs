@@ -66,6 +66,7 @@ pub struct AddLocalShareRequest {
 pub struct UpdateShareRequest {
     pub title: Option<String>,
     pub description: Option<String>,
+    pub direct_download: Option<bool>,
 }
 
 pub fn get_local_ip() -> String {
@@ -291,9 +292,17 @@ async fn landing_page_handler(
     AxumPath(id): AxumPath<String>,
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-) -> impl IntoResponse {
+) -> Response {
     if let Some(share) = state.registry.get(&id) {
         state.registry.increment_views(&id);
+
+        if share.direct_download {
+            return (
+                StatusCode::FOUND,
+                [(header::LOCATION, format!("/api/download/{}", share.id))],
+                Html(String::new()),
+            ).into_response();
+        }
 
         let host = headers
             .get(header::HOST)
@@ -310,13 +319,13 @@ async fn landing_page_handler(
             StatusCode::OK,
             [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
             Html(generate_landing_html(&share, &base_url)),
-        )
+        ).into_response()
     } else {
         (
             StatusCode::NOT_FOUND,
             [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
             Html(generate_not_found_html()),
-        )
+        ).into_response()
     }
 }
 
@@ -399,7 +408,7 @@ async fn update_share_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<UpdateShareRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    match state.registry.update_meta(&id, payload.title, payload.description) {
+    match state.registry.update_meta(&id, payload.title, payload.description, payload.direct_download) {
         Ok(item) => {
             let dto = format_share_dto(item, &state);
             Ok(Json(dto))

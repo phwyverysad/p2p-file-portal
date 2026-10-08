@@ -95,14 +95,31 @@
     }
   }
 
+  function handleExternalShare(newItem: ShareItem) {
+    if (!newItem || !newItem.id) return;
+    shares = [newItem, ...shares.filter(s => s.id !== newItem.id)];
+    if (settings.autoCopy) {
+      const link = newItem.shortUrl || newItem.publicUrl;
+      copyToClipboard(link);
+      showToast(`${I18N[settings.language].toastCopiedLink}${link}`);
+    } else {
+      showToast(I18N[settings.language].toastFileAdded);
+    }
+  }
+
+  // Register on window for instant zero-latency eval from backend
+  if (typeof window !== 'undefined') {
+    (window as any).__onShareAdded = handleExternalShare;
+  }
+
   function handleOpenEdit(item: ShareItem) {
     activeEditItem = item;
     isEditOpen = true;
   }
 
-  async function handleSaveEdit(id: string, title: string, desc: string) {
+  async function handleSaveEdit(id: string, title: string, desc: string, directDownload: boolean) {
     try {
-      const updated = await updateShare(id, title, desc);
+      const updated = await updateShare(id, title, desc, directDownload);
       shares = shares.map(s => s.id === id ? updated : s);
       showToast(I18N[settings.language].toastUpdated);
     } catch (err) {
@@ -164,14 +181,7 @@
     try {
       unlistenShare = await listen<ShareItem>('share-file-added', (event) => {
         if (event.payload) {
-          const newItem = event.payload;
-          shares = [newItem, ...shares.filter(s => s.id !== newItem.id)];
-          if (settings.autoCopy) {
-            const link = newItem.shortUrl || newItem.publicUrl;
-            showToast(`${I18N[settings.language].toastCopiedLink}${link}`);
-          } else {
-            showToast(I18N[settings.language].toastFileAdded);
-          }
+          handleExternalShare(event.payload);
         }
       });
     } catch (e) {

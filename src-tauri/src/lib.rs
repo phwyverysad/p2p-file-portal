@@ -38,8 +38,8 @@ fn try_forward_to_running_instance() -> bool {
     let Ok(mut stream) = TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(250)) else {
         return false;
     };
-    let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
-    let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(1000)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(1000)));
 
     // Collect file arguments
     let mut files = Vec::new();
@@ -59,9 +59,15 @@ fn try_forward_to_running_instance() -> bool {
         return true;
     }
 
+    let mut current_stream = Some(stream);
     for file in files {
-        let Ok(mut s) = TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(250)) else {
-            return false;
+        let mut s = if let Some(first) = current_stream.take() {
+            first
+        } else {
+            let Ok(new_s) = TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(250)) else {
+                return false;
+            };
+            new_s
         };
         let _ = s.set_read_timeout(Some(Duration::from_millis(1000)));
         let _ = s.set_write_timeout(Some(Duration::from_millis(1000)));
@@ -126,7 +132,14 @@ pub fn run() {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.unminimize();
+                    let _ = window.set_always_on_top(true);
                     let _ = window.set_focus();
+                    let _ = window.set_always_on_top(false);
+                    let _ = window.emit("share-file-added", dto);
+                    if let Ok(json) = serde_json::to_string(dto) {
+                        let js = format!("if (window.__onShareAdded) {{ window.__onShareAdded({}); }}", json);
+                        let _ = window.eval(&js);
+                    }
                 }
                 let _ = app.emit("share-file-added", dto);
             }
@@ -140,7 +153,9 @@ pub fn run() {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.unminimize();
+                    let _ = window.set_always_on_top(true);
                     let _ = window.set_focus();
+                    let _ = window.set_always_on_top(false);
                 }
             }
         }

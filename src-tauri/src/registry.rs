@@ -20,6 +20,8 @@ pub struct ShareItem {
     pub downloads: u64,
     pub views: u64,
     pub short_url: Option<String>,
+    #[serde(default)]
+    pub direct_download: bool,
 }
 
 #[derive(Clone)]
@@ -126,6 +128,7 @@ impl FileRegistry {
             downloads: 0,
             views: 0,
             short_url: None,
+            direct_download: false,
         };
 
         {
@@ -155,6 +158,7 @@ impl FileRegistry {
         id: &str,
         title: Option<String>,
         description: Option<String>,
+        direct_download: Option<bool>,
     ) -> Result<ShareItem, String> {
         let mut lock = self.shares.write().unwrap();
         if let Some(item) = lock.get_mut(id) {
@@ -165,6 +169,9 @@ impl FileRegistry {
             }
             if let Some(d) = description {
                 item.description = d.trim().to_string();
+            }
+            if let Some(dd) = direct_download {
+                item.direct_download = dd;
             }
             let updated = item.clone();
             drop(lock);

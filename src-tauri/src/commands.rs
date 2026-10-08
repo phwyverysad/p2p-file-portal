@@ -39,18 +39,19 @@ pub fn add_local_share(
     Ok(dto)
 }
 
-// 3. Update share title/description
+// 3. Update share title/description/download mode
 #[tauri::command]
 pub fn update_share(
     state: State<'_, TauriAppState>,
     id: String,
     title: Option<String>,
     description: Option<String>,
+    direct_download: Option<bool>,
 ) -> Result<ShareItemDto, String> {
     let item = state
         .server_state
         .registry
-        .update_meta(&id, title, description)?;
+        .update_meta(&id, title, description, direct_download)?;
     Ok(format_share_dto(item, &state.server_state))
 }
 

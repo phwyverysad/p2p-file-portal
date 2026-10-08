@@ -50,10 +50,11 @@ fn test_update_and_revoke_share() {
     assert_eq!(item.title, "archive.zip");
 
     let updated = registry
-        .update_meta(&item.id, Some("Updated Title".to_string()), Some("My Desc".to_string()))
+        .update_meta(&item.id, Some("Updated Title".to_string()), Some("My Desc".to_string()), Some(true))
         .expect("should update meta");
     assert_eq!(updated.title, "Updated Title");
     assert_eq!(updated.description, "My Desc");
+    assert_eq!(updated.direct_download, true);
 
     registry.increment_views(&item.id);
     registry.increment_downloads(&item.id);

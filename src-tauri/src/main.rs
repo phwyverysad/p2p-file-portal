@@ -1,5 +1,5 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Prevents console window on Windows (never flash black cmd window)
+#![windows_subsystem = "windows"]
 
 fn main() {
     local_file_sharer_lib::run();

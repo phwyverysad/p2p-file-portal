@@ -15,6 +15,7 @@ export interface ShareItem {
   shortUrl: string | null;
   publicUrl: string;
   localUrl: string;
+  directDownload?: boolean;
 }
 
 export interface TunnelStatus {
@@ -84,14 +85,19 @@ export async function addLocalShare(filePath: string, title?: string): Promise<S
   return data.share;
 }
 
-export async function updateShare(id: string, title?: string, description?: string): Promise<ShareItem> {
+export async function updateShare(
+  id: string, 
+  title?: string, 
+  description?: string, 
+  directDownload?: boolean
+): Promise<ShareItem> {
   if (isTauri) {
-    return await invoke<ShareItem>('update_share', { id, title, description });
+    return await invoke<ShareItem>('update_share', { id, title, description, directDownload });
   }
   const res = await fetch(`http://localhost:3030/api/shares/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description })
+    body: JSON.stringify({ title, description, directDownload })
   });
   return await res.json();
 }
