@@ -36,6 +36,7 @@ export interface AppSettings {
   autoStart: boolean;
   autoCopy: boolean;
   contextMenu: boolean;
+  confirmDelete: boolean;
 }
 
 export function formatBytes(bytes: number): string {
@@ -161,11 +162,21 @@ export async function retryTunnel(): Promise<void> {
   }
 }
 
-export async function copyToClipboard(text: string): Promise<void> {
+export async function copyToClipboard(text: string): Promise<boolean> {
+  if (isTauri) {
+    try {
+      await invoke('copy_to_clipboard', { text });
+      return true;
+    } catch (e) {
+      console.warn('Native clipboard error, fallback to navigator:', e);
+    }
+  }
   try {
     await navigator.clipboard.writeText(text);
+    return true;
   } catch (err) {
     console.warn('Clipboard write error:', err);
+    return false;
   }
 }
 

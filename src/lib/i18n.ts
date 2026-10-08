@@ -38,6 +38,8 @@ export const I18N = {
     toastShortened: 'ย่อลิงก์และคัดลอกแล้ว',
     toastFileAdded: 'เพิ่มไฟล์เข้าสู่รายการแชร์แล้ว',
     toastFileAddedAndCopied: 'เพิ่มไฟล์และคัดลอกลิงก์เรียบร้อยแล้ว!',
+    toastCopiedLink: 'คัดลอกลิงก์แล้ว: ',
+    loadingSharePrompt: 'กำลังเตรียมไฟล์และสร้างลิงก์สำหรับแชร์...',
     toastUpdated: 'อัปเดตข้อมูลเรียบร้อยแล้ว',
     toastRevoked: 'ยกเลิกการแชร์เรียบร้อยแล้ว',
     settingsTitle: 'การตั้งค่า (Settings)',
@@ -63,6 +65,9 @@ export const I18N = {
     deleteModalTitle: 'ยืนยันการยกเลิกแชร์',
     deleteModalPrompt: 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการแชร์ไฟล์นี้?',
     deleteModalNote: 'ลิงก์ที่แชร์จะใช้งานไม่ได้ทันที (ไฟล์จริงบนคอมพิวเตอร์ของคุณจะปลอดภัย ไม่ถูกลบ)',
+    deleteModalDontShowAgain: 'ไม่ต้องแสดงการยืนยันนี้อีก (แสดงแค่รอบเดียว)',
+    settingConfirmDelete: 'ยืนยันก่อนยกเลิกการแชร์',
+    settingConfirmDeleteDesc: 'แสดงหน้าต่างยืนยันเมื่อกดปุ่มยกเลิกการแชร์ไฟล์',
     btnConfirmDelete: 'ยกเลิกแชร์',
   },
   en: {
@@ -101,6 +106,8 @@ export const I18N = {
     toastShortened: 'Link shortened and copied',
     toastFileAdded: 'File added to shares',
     toastFileAddedAndCopied: 'File added and link copied to clipboard!',
+    toastCopiedLink: 'Link copied: ',
+    loadingSharePrompt: 'Preparing file and generating share link...',
     toastUpdated: 'File details updated',
     toastRevoked: 'Share revoked successfully',
     settingsTitle: 'Settings',
@@ -126,6 +133,9 @@ export const I18N = {
     deleteModalTitle: 'Confirm Revoke Share',
     deleteModalPrompt: 'Are you sure you want to revoke this file share?',
     deleteModalNote: 'Download links will become inactive immediately (your physical file is safe and untouched)',
+    deleteModalDontShowAgain: 'Do not ask again (show only once)',
+    settingConfirmDelete: 'Confirm Before Revoking',
+    settingConfirmDeleteDesc: 'Show confirmation dialog before revoking a shared file',
     btnConfirmDelete: 'Revoke Share',
   }
 };

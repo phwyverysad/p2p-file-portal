@@ -117,9 +117,10 @@ pub fn run() {
     let port = 3030;
     let tunnel_manager = Arc::new(TunnelManager::new());
     let app_handle_slot: Arc<RwLock<Option<tauri::AppHandle>>> = Arc::new(RwLock::new(None));
+    let app_settings_arc = Arc::new(RwLock::new(app_settings));
 
     let app_handle_for_share = app_handle_slot.clone();
-    let on_share_added = Some(Arc::new(move |file_path: &str| {
+    let on_share_added = Some(Arc::new(move |dto: &server::ShareItemDto| {
         if let Ok(guard) = app_handle_for_share.read() {
             if let Some(app) = guard.as_ref() {
                 if let Some(window) = app.get_webview_window("main") {
@@ -127,7 +128,7 @@ pub fn run() {
                     let _ = window.unminimize();
                     let _ = window.set_focus();
                 }
-                let _ = app.emit("share-file-requested", file_path.to_string());
+                let _ = app.emit("share-file-added", dto);
             }
         }
     }) as server::ShareNotifier);
@@ -151,6 +152,7 @@ pub fn run() {
         tunnel_url: tunnel_manager.public_url.clone(),
         tunnel_status: tunnel_manager.status.clone(),
         tunnel_error: tunnel_manager.error_message.clone(),
+        settings: Some(app_settings_arc.clone()),
         on_share_added,
         on_focus_requested,
     });
@@ -159,7 +161,7 @@ pub fn run() {
         server_state: server_state.clone(),
         tunnel_manager: tunnel_manager.clone(),
         settings_path,
-        app_settings: Arc::new(RwLock::new(app_settings)),
+        app_settings: app_settings_arc.clone(),
         pending_shares: pending_shares.clone(),
     };
 
@@ -273,6 +275,7 @@ pub fn run() {
             commands::show_in_folder,
             commands::retry_tunnel,
             commands::get_pending_shares,
+            commands::copy_to_clipboard,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

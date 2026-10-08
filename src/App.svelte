@@ -37,6 +37,8 @@
   let serverStatus: ServerStatus | null = null;
   let isProcessing = false;
 
+  let processingFileName = '';
+
   // Modals state
   let isSettingsOpen = false;
   let isEditOpen = false;
@@ -53,7 +55,7 @@
     toastMessage = msg;
     toastVisible = true;
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastVisible = false, 2500);
+    toastTimer = setTimeout(() => toastVisible = false, 2800);
   }
 
   async function loadData() {
@@ -72,14 +74,15 @@
   }
 
   async function handleAddFile(path: string, title?: string) {
+    processingFileName = path.split(/[/\\]/).pop() || path;
     isProcessing = true;
     try {
       const newItem = await addLocalShare(path, title);
-      shares = [newItem, ...shares];
+      shares = [newItem, ...shares.filter(s => s.id !== newItem.id)];
       if (settings.autoCopy) {
         const link = newItem.shortUrl || newItem.publicUrl;
         await copyToClipboard(link);
-        showToast(I18N[settings.language].toastFileAddedAndCopied);
+        showToast(`${I18N[settings.language].toastCopiedLink}${link}`);
       } else {
         showToast(I18N[settings.language].toastFileAdded);
       }
@@ -88,6 +91,7 @@
       alert(err.message || 'Failed to add share');
     } finally {
       isProcessing = false;
+      processingFileName = '';
     }
   }
 
@@ -107,12 +111,20 @@
   }
 
   function handleOpenDelete(item: ShareItem) {
+    if (settings.confirmDelete === false) {
+      handleConfirmDelete(item.id, false);
+      return;
+    }
     activeDeleteItem = item;
     isDeleteOpen = true;
   }
 
-  async function handleConfirmDelete(id: string) {
+  async function handleConfirmDelete(id: string, dontShowAgain = false) {
     try {
+      if (dontShowAgain) {
+        settings.confirmDelete = false;
+        await saveAppSettings(settings);
+      }
       await revokeShare(id);
       shares = shares.filter(s => s.id !== id);
       showToast(I18N[settings.language].toastRevoked);
@@ -133,6 +145,7 @@
   }
 
   let unlistenShare: (() => void) | null = null;
+  let unlistenReq: (() => void) | null = null;
 
   onMount(async () => {
     await loadData();
@@ -149,7 +162,24 @@
 
     // 2. Listen to subsequent right-click share requests (while app is running)
     try {
-      unlistenShare = await listen<string>('share-file-requested', async (event) => {
+      unlistenShare = await listen<ShareItem>('share-file-added', (event) => {
+        if (event.payload) {
+          const newItem = event.payload;
+          shares = [newItem, ...shares.filter(s => s.id !== newItem.id)];
+          if (settings.autoCopy) {
+            const link = newItem.shortUrl || newItem.publicUrl;
+            showToast(`${I18N[settings.language].toastCopiedLink}${link}`);
+          } else {
+            showToast(I18N[settings.language].toastFileAdded);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to attach share-file-added listener:', e);
+    }
+
+    try {
+      unlistenReq = await listen<string>('share-file-requested', async (event) => {
         if (event.payload && typeof event.payload === 'string') {
           await handleAddFile(event.payload);
         }
@@ -168,16 +198,14 @@
 
     return () => {
       clearInterval(interval);
-      if (unlistenShare) {
-        unlistenShare();
-      }
+      if (unlistenShare) unlistenShare();
+      if (unlistenReq) unlistenReq();
     };
   });
 
   onDestroy(() => {
-    if (unlistenShare) {
-      unlistenShare();
-    }
+    if (unlistenShare) unlistenShare();
+    if (unlistenReq) unlistenReq();
   });
 </script>
 
@@ -200,6 +228,8 @@
     onEdit={handleOpenEdit} 
     onDelete={handleOpenDelete} 
     onShowToast={showToast} 
+    {isProcessing}
+    {processingFileName}
   />
 </main>
 

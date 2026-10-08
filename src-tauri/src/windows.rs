@@ -76,3 +76,54 @@ pub fn is_context_menu_registered() -> bool {
         false
     }
 }
+
+pub fn set_clipboard_text(text: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::ffi::OsStr;
+        use std::os::windows::ffi::OsStrExt;
+
+        extern "system" {
+            fn OpenClipboard(hWndNewOwner: *mut std::ffi::c_void) -> i32;
+            fn CloseClipboard() -> i32;
+            fn EmptyClipboard() -> i32;
+            fn SetClipboardData(uFormat: u32, hMem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+            fn GlobalAlloc(uFlags: u32, dwBytes: usize) -> *mut std::ffi::c_void;
+            fn GlobalLock(hMem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+            fn GlobalUnlock(hMem: *mut std::ffi::c_void) -> i32;
+        }
+
+        const CF_UNICODETEXT: u32 = 13;
+        const GMEM_MOVEABLE: u32 = 0x0002;
+
+        let wide: Vec<u16> = OsStr::new(text).encode_wide().chain(std::iter::once(0)).collect();
+        let bytes = wide.len() * 2;
+
+        unsafe {
+            if OpenClipboard(std::ptr::null_mut()) == 0 {
+                return Err("Failed to open Windows clipboard".to_string());
+            }
+            EmptyClipboard();
+            let h_mem = GlobalAlloc(GMEM_MOVEABLE, bytes);
+            if h_mem.is_null() {
+                CloseClipboard();
+                return Err("Failed to allocate global memory".to_string());
+            }
+            let ptr = GlobalLock(h_mem) as *mut u16;
+            if ptr.is_null() {
+                CloseClipboard();
+                return Err("Failed to lock global memory".to_string());
+            }
+            std::ptr::copy_nonoverlapping(wide.as_ptr(), ptr, wide.len());
+            GlobalUnlock(h_mem);
+            SetClipboardData(CF_UNICODETEXT, h_mem);
+            CloseClipboard();
+        }
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = text;
+        Ok(())
+    }
+}

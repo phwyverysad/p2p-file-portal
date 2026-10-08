@@ -12,7 +12,7 @@ use tower_http::cors::{Any, CorsLayer};
 use crate::registry::{FileRegistry, ShareItem};
 use crate::stream::build_stream_response;
 
-pub type ShareNotifier = Arc<dyn Fn(&str) + Send + Sync + 'static>;
+pub type ShareNotifier = Arc<dyn Fn(&ShareItemDto) + Send + Sync + 'static>;
 pub type FocusNotifier = Arc<dyn Fn() + Send + Sync + 'static>;
 
 #[derive(Clone)]
@@ -22,11 +22,12 @@ pub struct AppState {
     pub tunnel_url: Arc<RwLock<Option<String>>>,
     pub tunnel_status: Arc<RwLock<String>>, // "offline" | "starting" | "online" | "error"
     pub tunnel_error: Arc<RwLock<Option<String>>>,
+    pub settings: Option<Arc<RwLock<crate::settings::AppSettings>>>,
     pub on_share_added: Option<ShareNotifier>,
     pub on_focus_requested: Option<FocusNotifier>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShareItemDto {
     #[serde(flatten)]
@@ -361,9 +362,23 @@ async fn add_local_share_handler(
         Ok(item) => {
             let dto = format_share_dto(item, &state);
 
+            // Auto-copy to native Windows clipboard if auto_copy is true
+            let best_link = if let Some(ref su) = dto.item.short_url {
+                su.clone()
+            } else if !dto.public_url.is_empty() {
+                dto.public_url.clone()
+            } else {
+                dto.local_url.clone()
+            };
+            if let Some(ref s) = state.settings {
+                if s.read().unwrap().auto_copy {
+                    let _ = crate::windows::set_clipboard_text(&best_link);
+                }
+            }
+
             // Notify GUI and bring window to front
             if let Some(ref cb) = state.on_share_added {
-                cb(&payload.file_path);
+                cb(&dto);
             }
 
             Ok((StatusCode::CREATED, Json(serde_json::json!({ "share": dto }))))

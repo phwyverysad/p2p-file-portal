@@ -28,7 +28,15 @@ pub fn add_local_share(
         .server_state
         .registry
         .register(&file_path, title, None)?;
-    Ok(format_share_dto(item, &state.server_state))
+    let dto = format_share_dto(item, &state.server_state);
+
+    // Auto-copy to clipboard natively if enabled
+    if state.app_settings.read().unwrap().auto_copy {
+        let link = dto.item.short_url.as_ref().unwrap_or(&dto.public_url);
+        let _ = windows::set_clipboard_text(link);
+    }
+
+    Ok(dto)
 }
 
 // 3. Update share title/description
@@ -158,4 +166,10 @@ pub fn get_pending_shares(state: State<'_, TauriAppState>) -> Vec<String> {
     } else {
         Vec::new()
     }
+}
+
+// 13. Copy text natively to Windows clipboard
+#[tauri::command]
+pub fn copy_to_clipboard(text: String) -> Result<(), String> {
+    windows::set_clipboard_text(&text)
 }

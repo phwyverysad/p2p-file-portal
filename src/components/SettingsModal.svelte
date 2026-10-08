@@ -35,6 +35,11 @@
     onSaveSettings(settings);
   }
 
+  function handleToggleConfirmDelete(e: Event) {
+    settings.confirmDelete = (e.target as HTMLInputElement).checked;
+    onSaveSettings(settings);
+  }
+
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) {
       onClose();
@@ -152,6 +157,20 @@
           </div>
           <label class="toggle-switch shrink-0">
             <input type="checkbox" checked={settings.autoCopy} on:change={handleToggleAutoCopy}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="border-t border-slate-100"></div>
+
+        <!-- Confirm Before Delete -->
+        <div class="flex items-center justify-between gap-4 py-1">
+          <div>
+            <div class="text-xs font-bold text-slate-800">{t.settingConfirmDelete}</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">{t.settingConfirmDeleteDesc}</div>
+          </div>
+          <label class="toggle-switch shrink-0">
+            <input type="checkbox" checked={settings.confirmDelete ?? true} on:change={handleToggleConfirmDelete}>
             <span class="toggle-slider"></span>
           </label>
         </div>

@@ -27,6 +27,7 @@ async fn test_landing_page_and_download_routes() {
         tunnel_url: Arc::new(RwLock::new(Some("https://mock.trycloudflare.com".to_string()))),
         tunnel_status: Arc::new(RwLock::new("online".to_string())),
         tunnel_error: Arc::new(RwLock::new(None)),
+        settings: None,
         on_share_added: None,
         on_focus_requested: None,
     });

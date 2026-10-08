@@ -6,14 +6,21 @@
   export let item: ShareItem | null = null;
   export let lang: Language = 'th';
   export let onClose: () => void;
-  export let onConfirm: (id: string) => Promise<void>;
+  export let onConfirm: (id: string, dontShowAgain?: boolean) => Promise<void>;
+
+  let dontShowAgain = false;
 
   $: t = I18N[lang];
   $: iconType = item ? getFileCategoryIcon(item.originalName) : 'file';
 
+  // Reset checkbox when modal closes or item changes
+  $: if (!isOpen) {
+    dontShowAgain = false;
+  }
+
   async function handleConfirm() {
     if (!item) return;
-    await onConfirm(item.id);
+    await onConfirm(item.id, dontShowAgain);
     onClose();
   }
 
@@ -73,6 +80,16 @@
           </svg>
           <span>{t.deleteModalNote}</span>
         </div>
+
+        <!-- Don't ask again checkbox -->
+        <label class="flex items-center gap-2.5 pt-1 cursor-pointer select-none text-xs text-slate-600 hover:text-slate-900">
+          <input 
+            type="checkbox" 
+            bind:checked={dontShowAgain}
+            class="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
+          />
+          <span class="font-medium">{t.deleteModalDontShowAgain}</span>
+        </label>
       </div>
 
       <!-- Footer -->

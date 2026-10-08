@@ -2,6 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
@@ -10,6 +14,8 @@ pub struct AppSettings {
     pub auto_start: bool,
     pub auto_copy: bool,
     pub context_menu: bool,
+    #[serde(default = "default_true")]
+    pub confirm_delete: bool,
 }
 
 impl Default for AppSettings {
@@ -20,6 +26,7 @@ impl Default for AppSettings {
             auto_start: false,
             auto_copy: true,
             context_menu: true,
+            confirm_delete: true,
         }
     }
 }
