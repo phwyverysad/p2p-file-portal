@@ -67,3 +67,32 @@ fn test_update_and_revoke_share() {
     assert!(revoked);
     assert!(registry.get(&item.id).is_none());
 }
+
+#[test]
+fn test_register_directory_share() {
+    let dir = tempdir().unwrap();
+    let folder_path = dir.path().join("my_shared_folder");
+    std::fs::create_dir_all(&folder_path).unwrap();
+
+    let f1 = folder_path.join("file1.txt");
+    std::fs::write(&f1, b"12345").unwrap();
+
+    let sub = folder_path.join("sub");
+    std::fs::create_dir_all(&sub).unwrap();
+    let f2 = sub.join("file2.txt");
+    std::fs::write(&f2, b"67890").unwrap();
+
+    let storage_path = dir.path().join("shares.json");
+    let registry = local_file_sharer_lib::registry::FileRegistry::new(storage_path);
+
+    let item = registry
+        .register(folder_path.to_str().unwrap(), None, None)
+        .expect("should register directory");
+
+    assert!(item.is_directory);
+    assert_eq!(item.file_count, 2);
+    assert_eq!(item.size, 10);
+    assert_eq!(item.mime_type, "application/zip");
+    assert_eq!(item.original_name, "my_shared_folder");
+}
+

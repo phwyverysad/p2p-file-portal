@@ -127,6 +127,30 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
     let download_url = format!("{}/api/download/{}", base_url, share.id);
     let page_url = format!("{}/d/{}", base_url, share.id);
 
+    let icon_svg = if share.is_directory {
+        r#"<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+      </svg>"#
+    } else {
+        r#"<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>"#
+    };
+
+    let badge_text = if share.is_directory {
+        format!("📁 โฟลเดอร์ ({} ไฟล์) • ขนาด {}", share.file_count, size_str)
+    } else {
+        size_str
+    };
+
+    let button_text = if share.is_directory {
+        "ดาวน์โหลดโฟลเดอร์ ZIP (Download Folder as ZIP)"
+    } else {
+        "ดาวน์โหลดไฟล์ทันที (Direct Download)"
+    };
+
     format!(r#"<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -242,24 +266,20 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
 <body>
   <div class="card">
     <div class="icon-box">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" y1="15" x2="12" y2="3"></line>
-      </svg>
+      {icon_svg}
     </div>
     <h1 class="title">{title}</h1>
     <p class="orig-name">{original_name}</p>
-    <div class="badge">{size_str}</div>
+    <div class="badge">{badge_text}</div>
     <a href="{download_url}" class="btn-download">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
       </svg>
-      ดาวน์โหลดไฟล์ทันที (Direct Download)
+      {button_text}
     </a>
-    <p class="footer-note">ส่งตรงจากเครื่องผู้แชร์ • รองรับการดาวน์โหลดความเร็วสูง / Resume</p>
+    <p class="footer-note">ส่งตรงจากเครื่องผู้แชร์ • รองรับการดาวน์โหลดความเร็วสูง</p>
   </div>
 </body>
 </html>"#)
@@ -337,13 +357,20 @@ async fn download_handler(
     if let Some(share) = state.registry.get(&id) {
         state.registry.increment_downloads(&id);
 
-        let range_header = headers
-            .get(header::RANGE)
-            .and_then(|val| val.to_str().ok());
+        if share.is_directory {
+            match crate::stream::build_directory_zip_stream(&share.file_path, &share.original_name).await {
+                Ok(resp) => resp,
+                Err((status, msg)) => (status, msg).into_response(),
+            }
+        } else {
+            let range_header = headers
+                .get(header::RANGE)
+                .and_then(|val| val.to_str().ok());
 
-        match build_stream_response(&share.file_path, range_header, &share.original_name).await {
-            Ok(resp) => resp,
-            Err((status, msg)) => (status, msg).into_response(),
+            match build_stream_response(&share.file_path, range_header, &share.original_name).await {
+                Ok(resp) => resp,
+                Err((status, msg)) => (status, msg).into_response(),
+            }
         }
     } else {
         (StatusCode::NOT_FOUND, "File share not found or revoked").into_response()

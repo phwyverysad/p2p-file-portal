@@ -8,33 +8,39 @@ pub fn register_context_menu(exe_path: &str) -> Result<(), String> {
     {
         let clean_path = exe_path.strip_prefix(r"\\?\").unwrap_or(exe_path);
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        let shell_path = r"Software\Classes\*\shell";
-        let (shell_key, _) = hkcu
-            .create_subkey(shell_path)
-            .map_err(|e| format!("Failed to open shell key: {}", e))?;
+        let target_paths = [
+            r"Software\Classes\*\shell",
+            r"Software\Classes\Directory\shell",
+        ];
 
-        let (menu_key, _) = shell_key
-            .create_subkey("FileSharer")
-            .map_err(|e| format!("Failed to create FileSharer key: {}", e))?;
+        for shell_path in target_paths {
+            let (shell_key, _) = hkcu
+                .create_subkey(shell_path)
+                .map_err(|e| format!("Failed to open shell key {}: {}", shell_path, e))?;
 
-        menu_key
-            .set_value("", &"แชร์ลิ้ง")
-            .map_err(|e| format!("Failed to set menu label: {}", e))?;
+            let (menu_key, _) = shell_key
+                .create_subkey("FileSharer")
+                .map_err(|e| format!("Failed to create FileSharer key: {}", e))?;
 
-        menu_key
-            .set_value("Icon", &clean_path)
-            .map_err(|e| format!("Failed to set menu icon: {}", e))?;
+            menu_key
+                .set_value("", &"แชร์ลิ้ง")
+                .map_err(|e| format!("Failed to set menu label: {}", e))?;
 
-        let _ = menu_key.set_value("Position", &"Top");
+            menu_key
+                .set_value("Icon", &clean_path)
+                .map_err(|e| format!("Failed to set menu icon: {}", e))?;
 
-        let (cmd_key, _) = menu_key
-            .create_subkey("command")
-            .map_err(|e| format!("Failed to create command key: {}", e))?;
+            let _ = menu_key.set_value("Position", &"Top");
 
-        let cmd_string = format!("\"{}\" \"%1\"", clean_path);
-        cmd_key
-            .set_value("", &cmd_string)
-            .map_err(|e| format!("Failed to set command value: {}", e))?;
+            let (cmd_key, _) = menu_key
+                .create_subkey("command")
+                .map_err(|e| format!("Failed to create command key: {}", e))?;
+
+            let cmd_string = format!("\"{}\" \"%1\"", clean_path);
+            cmd_key
+                .set_value("", &cmd_string)
+                .map_err(|e| format!("Failed to set command value: {}", e))?;
+        }
 
         Ok(())
     }
@@ -49,12 +55,18 @@ pub fn unregister_context_menu() -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        let shell_path = r"Software\Classes\*\shell";
-        if let Ok(shell_key) = hkcu.open_subkey_with_flags(shell_path, KEY_WRITE) {
-            if let Ok(menu_key) = shell_key.open_subkey_with_flags("FileSharer", KEY_WRITE) {
-                let _ = menu_key.delete_subkey("command");
+        let target_paths = [
+            r"Software\Classes\*\shell",
+            r"Software\Classes\Directory\shell",
+        ];
+
+        for shell_path in target_paths {
+            if let Ok(shell_key) = hkcu.open_subkey_with_flags(shell_path, KEY_WRITE) {
+                if let Ok(menu_key) = shell_key.open_subkey_with_flags("FileSharer", KEY_WRITE) {
+                    let _ = menu_key.delete_subkey("command");
+                }
+                let _ = shell_key.delete_subkey("FileSharer");
             }
-            let _ = shell_key.delete_subkey("FileSharer");
         }
         Ok(())
     }

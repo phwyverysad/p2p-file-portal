@@ -1,6 +1,6 @@
 <script lang="ts">
   import { I18N, type Language } from '../lib/i18n';
-  import { pickFileDialog } from '../lib/api';
+  import { pickFileDialog, pickFolderDialog } from '../lib/api';
 
   export let lang: Language = 'th';
   export let onAddFile: (path: string, title?: string) => Promise<void>;
@@ -12,9 +12,22 @@
   let customTitleInput = '';
   let isDragOver = false;
 
-  async function handleBrowse() {
+  async function handleBrowseFile() {
     try {
       const selected = await pickFileDialog();
+      if (selected) {
+        await onAddFile(selected, customTitleInput.trim() || undefined);
+        localPathInput = '';
+        customTitleInput = '';
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleBrowseFolder() {
+    try {
+      const selected = await pickFolderDialog();
       if (selected) {
         await onAddFile(selected, customTitleInput.trim() || undefined);
         localPathInput = '';
@@ -29,7 +42,6 @@
     e.preventDefault();
     isDragOver = false;
     if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-      // In web/webview, file.path is available on Electron/Tauri
       const file = e.dataTransfer.files[0] as any;
       const filePath = file.path || file.name;
       if (filePath) {
@@ -63,16 +75,13 @@
 
   <!-- Drag & Drop Zone -->
   <div 
-    class="dropzone {isDragOver ? 'dragover' : ''}" 
-    role="button" 
-    tabindex="0"
-    on:click={handleBrowse}
-    on:keydown={(e) => e.key === 'Enter' && handleBrowse()}
+    class="dropzone {isDragOver ? 'dragover' : ''} group" 
+    role="region"
     on:dragover|preventDefault={() => isDragOver = true}
     on:dragleave|preventDefault={() => isDragOver = false}
     on:drop={handleDrop}
   >
-    <div class="w-12 h-12 rounded-full bg-sky-50 text-sky-600 flex items-center justify-center mb-3">
+    <div class="w-12 h-12 rounded-full bg-sky-50 text-sky-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
       <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="17 8 12 3 7 8"></polyline>
@@ -80,7 +89,33 @@
       </svg>
     </div>
     <div class="text-[14px] font-semibold text-slate-800 mb-1">{t.dropzonePrompt}</div>
-    <div class="text-[12px] text-slate-500">{t.dropzoneFormats}</div>
+    <div class="text-[12px] text-slate-500 mb-4">{t.dropzoneFormats}</div>
+
+    <!-- Quick action buttons inside Dropzone -->
+    <div class="flex items-center gap-2.5">
+      <button 
+        type="button" 
+        on:click|stopPropagation={handleBrowseFile}
+        class="px-3.5 py-1.5 text-xs font-semibold bg-white hover:bg-sky-50 hover:border-sky-300 text-sky-700 rounded-lg border border-slate-200 transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+      >
+        <svg class="w-3.5 h-3.5 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+        <span>{t.btnBrowse}</span>
+      </button>
+
+      <button 
+        type="button" 
+        on:click|stopPropagation={handleBrowseFolder}
+        class="px-3.5 py-1.5 text-xs font-semibold bg-white hover:bg-amber-50 hover:border-amber-300 text-amber-700 rounded-lg border border-slate-200 transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+      >
+        <svg class="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span>{t.btnBrowseFolder}</span>
+      </button>
+    </div>
   </div>
 
   <!-- Divider -->
@@ -96,7 +131,7 @@
         <input 
           type="text" 
           bind:value={localPathInput}
-          placeholder="C:\Users\Documents\MyFile.zip" 
+          placeholder="C:\Users\Documents\MyFolder หรือ MyFile.zip" 
           class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 focus:bg-white text-slate-800 transition-colors font-mono"
           required
         />
@@ -106,19 +141,30 @@
       </div>
       <button 
         type="button" 
-        on:click={handleBrowse} 
-        class="px-3 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5"
+        on:click={handleBrowseFile} 
+        title={t.btnBrowse}
+        class="px-2.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-colors flex items-center gap-1 active:scale-95"
       >
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
         </svg>
         <span>{t.btnBrowse}</span>
       </button>
       <button 
+        type="button" 
+        on:click={handleBrowseFolder} 
+        title={t.btnBrowseFolder}
+        class="px-2.5 py-2 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-200 transition-colors flex items-center gap-1 active:scale-95"
+      >
+        <svg class="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span>{t.btnBrowseFolder}</span>
+      </button>
+      <button 
         type="submit" 
         disabled={isProcessing || !localPathInput.trim()} 
-        class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+        class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
       >
         <span>{isProcessing ? t.loading : t.btnShare}</span>
       </button>

@@ -16,6 +16,8 @@ export interface ShareItem {
   publicUrl: string;
   localUrl: string;
   directDownload?: boolean;
+  isDirectory?: boolean;
+  fileCount?: number;
 }
 
 export interface TunnelStatus {
@@ -48,7 +50,8 @@ export function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-export function getFileCategoryIcon(fileName: string): string {
+export function getFileCategoryIcon(fileName: string, isDirectory?: boolean): string {
+  if (isDirectory) return 'folder';
   const ext = fileName.split('.').pop()?.toLowerCase() || '';
   if (['mp4', 'mkv', 'mov', 'webm', 'avi', 'wmv'].includes(ext)) return 'video';
   if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'].includes(ext)) return 'audio';
@@ -60,7 +63,7 @@ export function getFileCategoryIcon(fileName: string): string {
 }
 
 // Fallback to fetch if Tauri IPC not ready (e.g. dev browser mode)
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 export async function listShares(): Promise<ShareItem[]> {
   if (isTauri) {
@@ -150,6 +153,13 @@ export async function saveAppSettings(settings: AppSettings): Promise<AppSetting
 export async function pickFileDialog(): Promise<string | null> {
   if (isTauri) {
     return await invoke<string | null>('pick_file_dialog');
+  }
+  return null;
+}
+
+export async function pickFolderDialog(): Promise<string | null> {
+  if (isTauri) {
+    return await invoke<string | null>('pick_folder_dialog');
   }
   return null;
 }

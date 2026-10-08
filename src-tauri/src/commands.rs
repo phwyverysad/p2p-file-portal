@@ -134,6 +134,17 @@ pub async fn pick_file_dialog() -> Result<Option<String>, String> {
     Ok(file.map(|f| f.path().to_string_lossy().to_string()))
 }
 
+// 9.1 Folder dialog
+#[tauri::command]
+pub async fn pick_folder_dialog() -> Result<Option<String>, String> {
+    let folder = rfd::AsyncFileDialog::new()
+        .set_title("เลือกโฟลเดอร์ที่ต้องการแชร์ (Select Folder to Share)")
+        .pick_folder()
+        .await;
+
+    Ok(folder.map(|f| f.path().to_string_lossy().to_string()))
+}
+
 // 10. Show in folder
 #[tauri::command]
 pub fn show_in_folder(path: String) -> Result<(), String> {

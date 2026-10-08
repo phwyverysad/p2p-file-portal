@@ -22,6 +22,31 @@ pub struct ShareItem {
     pub short_url: Option<String>,
     #[serde(default)]
     pub direct_download: bool,
+    #[serde(default)]
+    pub is_directory: bool,
+    #[serde(default)]
+    pub file_count: u64,
+}
+
+fn calculate_dir_stats(path: &Path) -> (u64, u64) {
+    let mut total_size = 0u64;
+    let mut file_count = 0u64;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if let Ok(meta) = entry.metadata() {
+                if meta.is_dir() {
+                    let (sub_size, sub_count) = calculate_dir_stats(&p);
+                    total_size += sub_size;
+                    file_count += sub_count;
+                } else if meta.is_file() {
+                    total_size += meta.len();
+                    file_count += 1;
+                }
+            }
+        }
+    }
+    (total_size, file_count)
 }
 
 #[derive(Clone)]
@@ -89,14 +114,15 @@ impl FileRegistry {
         let metadata = fs::metadata(path)
             .map_err(|e| format!("Failed to read metadata: {}", e))?;
 
-        if !metadata.is_file() {
-            return Err("Specified path is not a file".to_string());
+        let is_dir = metadata.is_dir();
+        if !metadata.is_file() && !is_dir {
+            return Err("Specified path is not a file or directory".to_string());
         }
 
         let original_name = path
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("file")
+            .unwrap_or("item")
             .to_string();
 
         let resolved_title = match title {
@@ -106,9 +132,15 @@ impl FileRegistry {
 
         let resolved_desc = description.unwrap_or_default();
 
-        let mime = mime_guess::from_path(path)
-            .first_or_octet_stream()
-            .to_string();
+        let (size, file_count, mime) = if is_dir {
+            let (total_size, count) = calculate_dir_stats(path);
+            (total_size, count, "application/zip".to_string())
+        } else {
+            let m = mime_guess::from_path(path)
+                .first_or_octet_stream()
+                .to_string();
+            (metadata.len(), 1, m)
+        };
 
         let mut rng = rand::thread_rng();
         let random_hex: String = (0..4)
@@ -122,13 +154,15 @@ impl FileRegistry {
             original_name,
             title: resolved_title,
             description: resolved_desc,
-            size: metadata.len(),
+            size,
             mime_type: mime,
             created_at: Utc::now().to_rfc3339(),
             downloads: 0,
             views: 0,
             short_url: None,
             direct_download: false,
+            is_directory: is_dir,
+            file_count,
         };
 
         {

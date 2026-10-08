@@ -114,7 +114,7 @@ pub fn run() {
     let mut initial_pending = Vec::new();
     for arg in std::env::args().skip(1) {
         let path = std::path::Path::new(&arg);
-        if path.exists() && path.is_file() {
+        if path.exists() && (path.is_file() || path.is_dir()) {
             initial_pending.push(arg);
         }
     }
@@ -196,7 +196,7 @@ pub fn run() {
             // If launched with file argument (e.g. from context menu while already running)
             for arg in args.iter().skip(1) {
                 let p = std::path::Path::new(arg);
-                if p.exists() && p.is_file() {
+                if p.exists() && (p.is_file() || p.is_dir()) {
                     if let Ok(mut pending) = pending_shares_si.lock() {
                         pending.push(arg.clone());
                     }
@@ -287,6 +287,7 @@ pub fn run() {
             commands::get_app_settings,
             commands::save_app_settings,
             commands::pick_file_dialog,
+            commands::pick_folder_dialog,
             commands::show_in_folder,
             commands::retry_tunnel,
             commands::get_pending_shares,

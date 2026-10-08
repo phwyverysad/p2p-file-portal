@@ -16,7 +16,7 @@
   export let onShowToast: (msg: string) => void;
 
   $: t = I18N[lang];
-  $: iconType = getFileCategoryIcon(item.originalName);
+  $: iconType = getFileCategoryIcon(item.originalName, item.isDirectory);
 
   let isShortening = false;
   let copiedPublic = false;
@@ -60,12 +60,16 @@
   }
 </script>
 
-<div class="p-3.5 bg-white border border-slate-200/90 rounded-xl hover:border-slate-300 transition-all hover:shadow-sm flex flex-col gap-2.5">
+<div class="p-3.5 bg-white border border-slate-200/90 rounded-xl hover:border-slate-300 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 flex flex-col gap-2.5 animate-slide-up">
   <div class="flex items-start justify-between gap-3">
     <!-- Icon & Title -->
     <div class="flex items-start gap-3 min-w-0">
-      <div class="w-10 h-10 rounded-lg bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center shrink-0 mt-0.5">
-        {#if iconType === 'video'}
+      <div class="w-10 h-10 rounded-lg {item.isDirectory ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-sky-50 border-sky-100 text-sky-600'} border flex items-center justify-center shrink-0 mt-0.5 transition-transform duration-200 hover:scale-105">
+        {#if item.isDirectory || iconType === 'folder'}
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        {:else if iconType === 'video'}
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
         {:else if iconType === 'audio'}
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
@@ -89,6 +93,19 @@
         <!-- Badges -->
         <div class="flex items-center gap-2 mt-1.5 flex-wrap">
           <span class="badge">{formatBytes(item.size)}</span>
+
+          {#if item.isDirectory}
+            <span class="badge text-amber-800 bg-amber-50 border-amber-200 font-semibold">
+              📁 {t.folderBadge} ({t.folderFilesCount.replace('{n}', (item.fileCount ?? 0).toString())})
+            </span>
+          {/if}
+
+          {#if item.directDownload}
+            <span class="badge text-indigo-700 bg-indigo-50 border-indigo-200" title={t.modeDirectDownloadDesc}>
+              ⚡ {t.modeDirectDownload}
+            </span>
+          {/if}
+
           <span class="badge text-emerald-700 bg-emerald-50 border-emerald-200">
             {t.downloadsCount.replace('{n}', item.downloads.toString())}
           </span>
