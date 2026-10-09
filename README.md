@@ -1,77 +1,77 @@
-# P2P File Portal ⚡
+# P2P File Portal
 
-> **Instant Local & Tunnel File Sharing Desktop App for Windows**  
-> Share any file or folder directly from your computer as a high-speed download link without uploading to any cloud servers. Built with **Tauri Framework (Tauri v2)**, **Rust backend**, and **Svelte 4 + TypeScript + Tailwind CSS**.
+> Instant Local and Tunnel File Sharing Desktop Application for Windows.  
+> Share any file or folder directly from your computer as a high-speed download link without uploading to any cloud servers. Built with Tauri Framework v2, Rust backend, and Svelte 4, TypeScript, and Tailwind CSS.
 
 ---
 
-## 📥 Downloads (การดาวน์โหลด)
+## Downloads
 
 You can download the latest version from [GitHub Releases](https://github.com/phwyverysad/p2p-file-portal/releases/latest):
 
-1. **`P2P-File-Portal-Portable.exe` (Portable Standalone)**
-   - Fully standalone executable with embedded tunnel engine.
-   - Run anywhere (Desktop, Downloads, USB flash drive) with **no installation required**.
-   - Auto-detects and seamlessly updates if an older version was running.
+1. **P2P-File-Portal-Portable.exe** (Standalone Executable)
+   - Fully self-contained portable version with embedded Cloudflare tunnel engine.
+   - No installation required. Runs directly from any location (Desktop, Downloads, USB flash drive).
+   - Automatically handles process updates if an older instance was running in the background.
 
-2. **`P2P-File-Portal-WebInstaller.exe` (Zero-Click Lightweight Web Installer)**
-   - Ultra-small launcher (~3MB).
-   - **Zero-click installation**: Launches immediately if already installed; silently fetches the latest release if not installed.
-   - Automatically sets up Desktop & Start Menu shortcuts.
-   - Keeps all your settings, preferences, and share history intact upon update.
+2. **P2P-File-Portal-WebInstaller.exe** (Zero-Click Lightweight Web Installer)
+   - Ultra-small launcher (~3 MB).
+   - Zero-click installation: Launches immediately if already installed; silently fetches and configures the latest release if not installed.
+   - Automatically sets up Desktop and Start Menu shortcuts.
+   - Preserves all your settings, preferences, and share history intact upon update.
 
 ---
 
-## ✨ Key Features (ฟีเจอร์หลัก)
+## Key Features
 
-1. **Zero-Upload Direct Stream (แชร์ตรงจากเครื่อง ไม่ต้องอัปโหลด):**
+1. **Zero-Upload Direct Streaming**
    - Direct real-time streaming straight from your Windows machine to the downloader.
-   - Supports files of any size (from a few KB up to 100GB+) and any file type.
-   - Zero-RAM chunked streaming pipeline.
+   - Supports files of any size (from a few kilobytes up to 100 GB and above) and any file format.
+   - Minimal memory footprint using chunked asynchronous streaming.
 
-2. **Folder Sharing with Automatic ZIP Streaming (แชร์โฟลเดอร์ บีบอัด ZIP ทันที):**
+2. **Folder Sharing with Automatic ZIP Streaming**
    - Share entire directories with subfolders and files.
-   - Streams on-the-fly as a standard `.zip` archive without waiting to compress to disk first.
+   - Streams dynamically on-the-fly as a standard ZIP archive without pre-compressing to disk first.
 
-3. **HTTP 206 Partial Content (Pause / Resume & IDM Support):**
-   - Full HTTP Byte-Range support for maximum download speed and multi-connection downloaders (IDM, Free Download Manager, curl).
+3. **HTTP 206 Partial Content (Pause / Resume and IDM Support)**
+   - Full HTTP Byte-Range support for maximum download speed and multi-connection download managers (such as IDM, Free Download Manager, and curl).
    - Seamlessly pause and resume interrupted downloads.
 
-4. **Dual-Link Mode (LAN + Public Cloudflare Tunnel):**
-   - **Public HTTPS Link:** Powered by Cloudflare Quick Tunnel — works through firewalls and NAT without router port-forwarding.
-   - **Local LAN URL:** Ultra-fast gigabit transfers within your home or office Wi-Fi / Ethernet.
+4. **Dual-Link Mode (LAN and Public Cloudflare Tunnel)**
+   - Public HTTPS Link: Powered by Cloudflare Quick Tunnel, operating through firewalls and NAT without router port-forwarding.
+   - Local LAN URL: High-speed gigabit transfers within your local Wi-Fi or Ethernet network.
 
-5. **Windows Context Menu ("แชร์ลิ้ง"):**
-   - Right-click any file or folder in File Explorer and select **"แชร์ลิ้ง" (Share Link)** to share instantly.
+5. **Windows Context Menu Integration**
+   - Right-click any file or directory in Windows File Explorer and select "Share Link" to share instantly.
 
-6. **Rich File Previews & Landing Page:**
-   - Beautiful responsive download landing page with genuine Windows shell icons, video/image thumbnails, and customized descriptions.
-   - Direct download mode bypass option.
+6. **Rich File Previews and Download Landing Page**
+   - Clean, responsive download landing page with authentic Windows shell icons, media previews, and custom descriptions.
+   - Direct download mode option to trigger immediate file download without opening the landing page.
 
-7. **Upload & Sharing History (ประวัติการแชร์):**
+7. **Upload and Sharing History**
    - Searchable history log of all past shares.
-   - Real-time disk availability detection (automatically strikes through deleted files).
-   - One-click restore and bulk deletion.
+   - Real-time disk availability detection (automatically marks deleted local files with strikethrough styling).
+   - Single-click restore and bulk deletion capabilities.
 
-8. **Settings & Customization:**
-   - Bilingual support: **ไทย (Thai)** & **English**.
-   - Minimize to system tray.
+8. **Settings and Customization**
+   - Bilingual interface support: English and Thai.
+   - Minimize to system tray for background operation.
    - Auto-copy links to clipboard upon file selection.
-   - URL shortener integration (da.gd / spoo.me).
+   - URL shortener integration (da.gd and spoo.me).
 
 ---
 
-## 🛠️ Tech Stack (โครงสร้างเทคโนโลยี)
+## Architecture and Tech Stack
 
 - **Desktop Framework:** Tauri v2
-- **Backend Core:** Rust 2021 + Axum + Tokio + Winreg + Cloudflared
-- **Frontend UI:** Svelte 4 + TypeScript
-- **Styling:** Tailwind CSS + PostCSS
+- **Backend Core:** Rust 2021, Axum, Tokio, Winreg, Cloudflared
+- **Frontend UI:** Svelte 4, TypeScript
+- **Styling:** Tailwind CSS, PostCSS
 - **Bundler:** esbuild
 
 ---
 
-## 🚀 Development (การรันในโหมดพัฒนา)
+## Development
 
 ### 1. Install dependencies
 ```bash
@@ -101,5 +101,5 @@ Executable output:
 
 ---
 
-## 📄 License
+## License
 MIT License. Free and open source.
