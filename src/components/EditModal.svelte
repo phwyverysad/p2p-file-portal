@@ -13,11 +13,17 @@
   let titleInput = '';
   let descInput = '';
   let directDownloadInput = false;
+  let lastItemId: string | null = null;
 
-  $: if (item) {
+  $: if (isOpen && item && item.id !== lastItemId) {
+    lastItemId = item.id;
     titleInput = item.title;
     descInput = item.description || '';
     directDownloadInput = !!item.directDownload;
+  }
+
+  $: if (!isOpen) {
+    lastItemId = null;
   }
 
   async function handleSubmit(e: Event) {

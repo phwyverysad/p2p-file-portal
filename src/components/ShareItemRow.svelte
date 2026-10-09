@@ -114,7 +114,7 @@
 
           {#if item.directDownload}
             <span class="badge text-indigo-700 bg-indigo-50 border-indigo-200" title={t.modeDirectDownloadDesc}>
-              ⚡ {t.modeDirectDownload}
+              {t.modeDirectDownload}
             </span>
           {/if}
 
