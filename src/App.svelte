@@ -108,9 +108,26 @@
     }
   }
 
+  function handleTunnelStatusUpdate(payload: any) {
+    if (!payload) return;
+    if (serverStatus) {
+      serverStatus = {
+        ...serverStatus,
+        tunnel: {
+          ...serverStatus.tunnel,
+          status: payload.status,
+          publicUrl: payload.publicUrl || serverStatus.tunnel.publicUrl,
+        }
+      };
+    }
+    // Instantly refresh shares so all rows reflect live public URLs
+    listShares().then(sh => shares = sh).catch(() => {});
+  }
+
   // Register on window for instant zero-latency eval from backend
   if (typeof window !== 'undefined') {
     (window as any).__onShareAdded = handleExternalShare;
+    (window as any).__onTunnelStatus = handleTunnelStatusUpdate;
   }
 
   function handleOpenEdit(item: ShareItem) {
@@ -165,6 +182,7 @@
   let unlistenShare: (() => void) | null = null;
   let unlistenReq: (() => void) | null = null;
   let unlistenDragDrop: (() => void) | null = null;
+  let unlistenTunnel: (() => void) | null = null;
 
   onMount(async () => {
     // 0. Disable right-click & F12 developer tools
@@ -280,16 +298,37 @@
       console.warn('Failed to attach share-file-requested listener:', e);
     }
 
-    // 3. Poll status and shares every 3 seconds
-    const interval = setInterval(async () => {
-      try {
-        serverStatus = await getStatus();
-        shares = await listShares();
-      } catch (e) {}
-    }, 3000);
+    try {
+      unlistenTunnel = await listen<any>('tunnel-status-changed', (event) => {
+        if (event.payload) {
+          handleTunnelStatusUpdate(event.payload);
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to attach tunnel-status-changed listener:', e);
+    }
+
+    // 3. Adaptive Fast Polling: checks every 350ms during startup/connecting, then 3000ms once online
+    let pollTimer: any = null;
+    let isDisposed = false;
+    const schedulePoll = () => {
+      if (isDisposed) return;
+      const isOnline = serverStatus?.tunnel?.status === 'online';
+      const delay = isOnline ? 3000 : 350;
+      pollTimer = setTimeout(async () => {
+        if (isDisposed) return;
+        try {
+          serverStatus = await getStatus();
+          shares = await listShares();
+        } catch (e) {}
+        schedulePoll();
+      }, delay);
+    };
+    schedulePoll();
 
     return () => {
-      clearInterval(interval);
+      isDisposed = true;
+      if (pollTimer) clearTimeout(pollTimer);
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('dragenter', handleWindowDragEnter);
@@ -299,6 +338,7 @@
       if (unlistenShare) unlistenShare();
       if (unlistenReq) unlistenReq();
       if (unlistenDragDrop) unlistenDragDrop();
+      if (unlistenTunnel) unlistenTunnel();
     };
   });
 
@@ -306,6 +346,7 @@
     if (unlistenShare) unlistenShare();
     if (unlistenReq) unlistenReq();
     if (unlistenDragDrop) unlistenDragDrop();
+    if (unlistenTunnel) unlistenTunnel();
   });
 </script>
 

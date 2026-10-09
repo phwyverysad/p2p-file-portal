@@ -26,13 +26,17 @@
 
   <div class="flex items-center gap-3">
     <!-- Tunnel status indicator -->
-    <div class="status-indicator {isConnecting ? '!bg-amber-50 !border-amber-200 !text-amber-700' : isError ? '!bg-rose-50 !border-rose-200 !text-rose-700' : ''}">
-      <span class="status-dot {isConnecting ? '!bg-amber-500' : isError ? '!bg-rose-500' : ''}"></span>
-      <span>
+    <div class="status-indicator {isOnline ? '' : isConnecting ? '!bg-emerald-50/90 !border-emerald-200 !text-emerald-700' : isError ? '!bg-rose-50 !border-rose-200 !text-rose-700' : ''}">
+      <span class="status-dot {isOnline ? '' : isConnecting ? '!bg-emerald-500 animate-pulse' : isError ? '!bg-rose-500' : ''}"></span>
+      <span class="flex items-center gap-1.5">
         {#if isOnline}
           {t.statusPublic}
         {:else if isConnecting}
-          {t.statusConnecting}
+          <span>{t.statusConnecting}</span>
+          <svg class="animate-spin w-3 h-3 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
         {:else if isError}
           {t.statusError}
         {:else}

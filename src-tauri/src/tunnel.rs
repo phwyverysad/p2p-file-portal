@@ -56,12 +56,15 @@ pub fn find_cloudflared_binary() -> Option<PathBuf> {
     None
 }
 
+pub type TunnelNotifier = Arc<dyn Fn(&str, Option<&str>) + Send + Sync + 'static>;
+
 #[derive(Clone)]
 pub struct TunnelManager {
     pub status: Arc<RwLock<String>>, // "offline" | "starting" | "online" | "error"
     pub public_url: Arc<RwLock<Option<String>>>,
     pub error_message: Arc<RwLock<Option<String>>>,
     child_handle: Arc<Mutex<Option<Child>>>,
+    pub on_status_changed: Arc<RwLock<Option<TunnelNotifier>>>,
 }
 
 impl TunnelManager {
@@ -71,15 +74,25 @@ impl TunnelManager {
             public_url: Arc::new(RwLock::new(None)),
             error_message: Arc::new(RwLock::new(None)),
             child_handle: Arc::new(Mutex::new(None)),
+            on_status_changed: Arc::new(RwLock::new(None)),
         }
+    }
+
+    pub fn set_notifier(&self, notifier: TunnelNotifier) {
+        *self.on_status_changed.write().unwrap() = Some(notifier);
     }
 
     pub fn set_status(&self, status: &str, url: Option<String>, err: Option<String>) {
         *self.status.write().unwrap() = status.to_string();
         if url.is_some() {
-            *self.public_url.write().unwrap() = url;
+            *self.public_url.write().unwrap() = url.clone();
         }
         *self.error_message.write().unwrap() = err;
+        if let Ok(guard) = self.on_status_changed.read() {
+            if let Some(ref cb) = *guard {
+                cb(status, url.as_deref());
+            }
+        }
     }
 
     pub async fn stop(&self) {
@@ -113,42 +126,87 @@ impl TunnelManager {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         let mut cmd = Command::new(&binary);
-        cmd.args(["tunnel", "--url", &url_target])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        cmd.args([
+            "tunnel",
+            "--no-autoupdate",
+            "--edge-ip-version",
+            "4",
+            "--protocol",
+            "http2",
+            "--retries",
+            "3",
+            "--grace-period",
+            "1s",
+            "--url",
+            &url_target,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
         #[cfg(target_os = "windows")]
         cmd.creation_flags(CREATE_NO_WINDOW);
 
         match cmd.spawn() {
             Ok(mut child) => {
+                let stdout = child.stdout.take();
                 let stderr = child.stderr.take();
+
                 let status_clone = self.status.clone();
                 let url_clone = self.public_url.clone();
                 let err_clone = self.error_message.clone();
+                let notif_clone = self.on_status_changed.clone();
 
-                tokio::spawn(async move {
-                    if let Some(err) = stderr {
-                        let reader = BufReader::new(err);
-                        let mut lines = reader.lines();
-                        let re = Regex::new(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com").unwrap();
+                if let Some(out) = stdout {
+                    let s_c = status_clone.clone();
+                    let u_c = url_clone.clone();
+                    let e_c = err_clone.clone();
+                    let n_c = notif_clone.clone();
+                    tokio::spawn(async move {
+                        scan_stream_for_url(out, u_c, s_c, e_c, n_c).await;
+                    });
+                }
 
-                        while let Ok(Some(line)) = lines.next_line().await {
-                            if let Some(mat) = re.find(&line) {
-                                let public_url = mat.as_str().to_string();
-                                *url_clone.write().unwrap() = Some(public_url);
-                                *status_clone.write().unwrap() = "online".to_string();
-                                *err_clone.write().unwrap() = None;
-                            }
-                        }
-                    }
-                });
+                if let Some(err) = stderr {
+                    let s_c = status_clone.clone();
+                    let u_c = url_clone.clone();
+                    let e_c = err_clone.clone();
+                    let n_c = notif_clone.clone();
+                    tokio::spawn(async move {
+                        scan_stream_for_url(err, u_c, s_c, e_c, n_c).await;
+                    });
+                }
 
                 let mut lock = self.child_handle.lock().await;
                 *lock = Some(child);
             }
             Err(e) => {
                 self.set_status("error", None, Some(format!("Failed to spawn tunnel: {}", e)));
+            }
+        }
+    }
+}
+
+async fn scan_stream_for_url<R: tokio::io::AsyncRead + Unpin + Send + 'static>(
+    reader: R,
+    url_target: Arc<RwLock<Option<String>>>,
+    status_target: Arc<RwLock<String>>,
+    err_target: Arc<RwLock<Option<String>>>,
+    notifier_target: Arc<RwLock<Option<TunnelNotifier>>>,
+) {
+    let buf = BufReader::new(reader);
+    let mut lines = buf.lines();
+    let re = Regex::new(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com").unwrap();
+
+    while let Ok(Some(line)) = lines.next_line().await {
+        if let Some(mat) = re.find(&line) {
+            let public_url = mat.as_str().to_string();
+            *url_target.write().unwrap() = Some(public_url.clone());
+            *status_target.write().unwrap() = "online".to_string();
+            *err_target.write().unwrap() = None;
+            if let Ok(guard) = notifier_target.read() {
+                if let Some(ref cb) = *guard {
+                    cb("online", Some(&public_url));
+                }
             }
         }
     }

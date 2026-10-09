@@ -161,6 +161,23 @@ pub fn run() {
         }
     }) as server::FocusNotifier);
 
+    let app_handle_for_tunnel = app_handle_slot.clone();
+    tunnel_manager.set_notifier(Arc::new(move |status: &str, url: Option<&str>| {
+        if let Ok(guard) = app_handle_for_tunnel.read() {
+            if let Some(app) = guard.as_ref() {
+                let payload = serde_json::json!({
+                    "status": status,
+                    "publicUrl": url,
+                });
+                let _ = app.emit("tunnel-status-changed", &payload);
+                if let Some(window) = app.get_webview_window("main") {
+                    let js = format!("if (window.__onTunnelStatus) {{ window.__onTunnelStatus({}); }}", payload);
+                    let _ = window.eval(&js);
+                }
+            }
+        }
+    }));
+
     let server_state = Arc::new(AppState {
         registry,
         port,
@@ -180,8 +197,21 @@ pub fn run() {
         pending_shares: pending_shares.clone(),
     };
 
-    let server_state_bg = server_state.clone();
-    let tunnel_mgr_bg = tunnel_manager.clone();
+    // Pre-start HTTP server and Cloudflare tunnel concurrently at earliest possible instant!
+    let s_state_early = server_state.clone();
+    tauri::async_runtime::spawn(async move {
+        let app_router = create_app(s_state_early);
+        let addr = format!("0.0.0.0:{}", port);
+        if let Ok(listener) = tokio::net::TcpListener::bind(&addr).await {
+            let _ = axum::serve(listener, app_router).await;
+        }
+    });
+
+    let t_mgr_early = tunnel_manager.clone();
+    tauri::async_runtime::spawn(async move {
+        t_mgr_early.start(port).await;
+    });
+
     let pending_shares_si = pending_shares.clone();
     let app_handle_slot_setup = app_handle_slot.clone();
 
@@ -207,21 +237,6 @@ pub fn run() {
         .manage(tauri_state)
         .setup(move |app| {
             *app_handle_slot_setup.write().unwrap() = Some(app.handle().clone());
-            // Spawn HTTP Web Server in background runtime
-            let s_state = server_state_bg;
-            tauri::async_runtime::spawn(async move {
-                let app_router = create_app(s_state);
-                let addr = format!("0.0.0.0:{}", port);
-                if let Ok(listener) = tokio::net::TcpListener::bind(&addr).await {
-                    let _ = axum::serve(listener, app_router).await;
-                }
-            });
-
-            // Start Cloudflare Tunnel in background
-            let t_mgr = tunnel_mgr_bg;
-            tauri::async_runtime::spawn(async move {
-                t_mgr.start(port).await;
-            });
 
             // Setup System Tray
             let quit_i = MenuItem::with_id(app, "quit", "ปิดโปรแกรม (Quit)", true, None::<&str>)?;
