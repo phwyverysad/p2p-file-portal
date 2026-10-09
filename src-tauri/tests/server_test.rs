@@ -103,3 +103,50 @@ async fn test_landing_page_and_download_routes() {
     assert_eq!(restore_resp.status(), StatusCode::OK);
     assert!(registry.get(&share.id).is_some());
 }
+
+#[tokio::test]
+async fn test_landing_page_renders_description() {
+    let dir = tempdir().unwrap();
+    let sample_file = dir.path().join("Claude Setup.exe");
+    let mut f = File::create(&sample_file).unwrap();
+    f.write_all(b"exe content").unwrap();
+
+    let storage_path = dir.path().join("shares.json");
+    let registry = FileRegistry::new(storage_path);
+    let share = registry
+        .register(
+            sample_file.to_str().unwrap(),
+            Some("Claude Setup.exe".to_string()),
+            Some("ไฟล์ดาวโหลด".to_string()),
+        )
+        .unwrap();
+
+    let state = Arc::new(AppState {
+        registry: registry.clone(),
+        port: 3030,
+        tunnel_url: Arc::new(RwLock::new(None)),
+        tunnel_status: Arc::new(RwLock::new("offline".to_string())),
+        tunnel_error: Arc::new(RwLock::new(None)),
+        settings: None,
+        on_share_added: None,
+        on_focus_requested: None,
+        thumbnail_cache: Arc::new(RwLock::new(std::collections::HashMap::new())),
+    });
+
+    let app = create_app(state);
+
+    let req = Request::builder()
+        .uri(format!("/d/{}", share.id))
+        .body(axum::body::Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(bytes.to_vec()).unwrap();
+    assert!(body_str.contains("Claude Setup.exe"));
+    assert!(body_str.contains("ไฟล์ดาวโหลด"));
+    assert!(body_str.contains(r#"<p class="desc">ไฟล์ดาวโหลด</p>"#));
+}
+

@@ -178,6 +178,23 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
         size_str
     };
 
+    let has_desc = !share.description.trim().is_empty();
+    let has_diff_orig = share.title != share.original_name;
+
+    let subtitle_html = if has_desc {
+        let desc_escaped = escape_html(&share.description);
+        if has_diff_orig {
+            format!(
+                r#"<p class="desc">{}</p><p class="orig-name">{}</p>"#,
+                desc_escaped, original_name
+            )
+        } else {
+            format!(r#"<p class="desc">{}</p>"#, desc_escaped)
+        }
+    } else {
+        format!(r#"<p class="orig-name">{}</p>"#, original_name)
+    };
+
     let button_text = if share.is_directory {
         "ดาวน์โหลดโฟลเดอร์ ZIP (Download Folder as ZIP)"
     } else {
@@ -268,11 +285,24 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
       margin-bottom: 8px;
       word-break: break-word;
     }}
+    .desc {{
+      font-size: 14px;
+      color: #475569;
+      margin-bottom: 16px;
+      word-break: break-word;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }}
     .orig-name {{
       font-size: 13px;
       color: #64748b;
       margin-bottom: 16px;
       word-break: break-all;
+    }}
+    .desc + .orig-name {{
+      margin-top: -6px;
+      font-size: 12px;
+      color: #94a3b8;
     }}
     .badge {{
       display: inline-block;
@@ -322,7 +352,7 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
       </div>
     </div>
     <h1 class="title">{title}</h1>
-    <p class="orig-name">{original_name}</p>
+    {subtitle_html}
     <div class="badge">{badge_text}</div>
     <a href="{download_url}" class="btn-download">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">

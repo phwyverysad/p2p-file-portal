@@ -382,6 +382,12 @@
                   <span>{formatDate(item.lastSharedAt || item.createdAt)}</span>
                 </div>
 
+                {#if item.description}
+                  <div class="text-[11px] text-slate-600 truncate mt-0.5" title={item.description}>
+                    {item.description}
+                  </div>
+                {/if}
+
                 <div class="text-[10px] text-slate-400 font-mono truncate mt-0.5" title={item.filePath}>
                   {item.filePath}
                 </div>

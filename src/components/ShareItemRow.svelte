@@ -100,7 +100,16 @@
 
       <div class="min-w-0">
         <h3 class="text-sm font-bold text-slate-900 truncate leading-tight" title={item.title}>{item.title}</h3>
-        <p class="text-xs text-slate-500 truncate mt-0.5" title={item.originalName}>{item.originalName}</p>
+        {#if item.description}
+          <p class="text-xs text-slate-600 truncate mt-0.5" title={item.description}>
+            {item.description}
+            {#if item.title !== item.originalName}
+              <span class="text-slate-400 text-[11px] ml-1">({item.originalName})</span>
+            {/if}
+          </p>
+        {:else}
+          <p class="text-xs text-slate-500 truncate mt-0.5" title={item.originalName}>{item.originalName}</p>
+        {/if}
         
         <!-- Badges -->
         <div class="flex items-center gap-2 mt-1.5 flex-wrap">
