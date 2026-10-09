@@ -13,6 +13,8 @@ fn test_thumbnail_extraction_for_exe() {
             assert!(!bytes.is_empty(), "Thumbnail bytes should not be empty");
             // Check PNG header: [137, 80, 78, 71, 13, 10, 26, 10]
             assert_eq!(&bytes[0..8], &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+            let decoded = image::load_from_memory(&bytes).expect("should decode valid PNG");
+            assert!(decoded.width() > 0 && decoded.height() > 0);
         }
     }
 }

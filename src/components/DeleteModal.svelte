@@ -9,13 +9,15 @@
   export let onConfirm: (id: string, dontShowAgain?: boolean) => Promise<void>;
 
   let dontShowAgain = false;
+  let thumbFailed = false;
 
   $: t = I18N[lang];
-  $: iconType = item ? getFileCategoryIcon(item.originalName) : 'file';
+  $: iconType = item ? getFileCategoryIcon(item.originalName, item.isDirectory) : 'file';
 
   // Reset checkbox when modal closes or item changes
   $: if (!isOpen) {
     dontShowAgain = false;
+    thumbFailed = false;
   }
 
   async function handleConfirm() {
@@ -62,8 +64,14 @@
 
         <!-- Preview Card -->
         <div class="p-3 bg-slate-50 border border-slate-200/90 rounded-xl flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-600 flex items-center justify-center shrink-0">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          <div class="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-600 flex items-center justify-center shrink-0 p-1 overflow-hidden">
+            {#if item.thumbnailUrl && !thumbFailed}
+              <img src={item.thumbnailUrl} alt="" class="w-full h-full object-contain" on:error={() => thumbFailed = true} />
+            {:else if item.isDirectory || iconType === 'folder'}
+              <svg class="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            {:else}
+              <svg class="w-5 h-5 text-sky-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            {/if}
           </div>
           <div class="min-w-0">
             <div class="text-xs font-bold text-slate-900 truncate">{item.title}</div>

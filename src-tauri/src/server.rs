@@ -110,6 +110,34 @@ pub fn format_share_dto(item: ShareItem, state: &AppState) -> ShareItemDto {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryItemDto {
+    #[serde(flatten)]
+    pub item: crate::registry::HistoryItem,
+    pub file_exists: bool,
+    pub is_active: bool,
+    pub active_share_id: Option<String>,
+    pub thumbnail_url: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteHistoryRequest {
+    pub ids: Vec<String>,
+}
+
+pub fn format_history_dto(dto: crate::registry::HistoryItemDto, state: &AppState) -> HistoryItemDto {
+    let thumbnail_url = format!("http://127.0.0.1:{}/thumbnail/{}", state.port, dto.item.id);
+    HistoryItemDto {
+        item: dto.item,
+        file_exists: dto.file_exists,
+        is_active: dto.is_active,
+        active_share_id: dto.active_share_id,
+        thumbnail_url,
+    }
+}
+
 pub fn escape_html(input: &str) -> String {
     input
         .replace('&', "&amp;")
@@ -481,6 +509,15 @@ async fn revoke_share_handler(
     }
 }
 
+async fn restore_share_handler(
+    State(state): State<Arc<AppState>>,
+    Json(item): Json<crate::registry::ShareItem>,
+) -> impl IntoResponse {
+    let restored = state.registry.restore(item);
+    let dto = format_share_dto(restored, &state);
+    (StatusCode::OK, Json(serde_json::json!({ "share": dto })))
+}
+
 async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let tunnel = TunnelStatusDto {
         status: state.tunnel_status.read().unwrap().clone(),
@@ -517,8 +554,16 @@ async fn thumbnail_handler(
         };
     }
 
-    if let Some(share) = state.registry.get(&id) {
-        let thumb = crate::windows::get_file_thumbnail(&share.file_path, 256);
+    let file_path = if let Some(share) = state.registry.get(&id) {
+        Some(share.file_path)
+    } else if let Some(hist) = state.registry.get_history(&id) {
+        Some(hist.file_path)
+    } else {
+        None
+    };
+
+    if let Some(path) = file_path {
+        let thumb = crate::windows::get_file_thumbnail(&path, 256);
         state
             .thumbnail_cache
             .write()
@@ -541,6 +586,41 @@ async fn thumbnail_handler(
     (StatusCode::NOT_FOUND, "Thumbnail not found").into_response()
 }
 
+async fn list_history_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let items = state.registry.list_history();
+    let dtos: Vec<HistoryItemDto> = items
+        .into_iter()
+        .map(|it| format_history_dto(it, &state))
+        .collect();
+    Json(serde_json::json!({ "history": dtos }))
+}
+
+async fn delete_history_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<DeleteHistoryRequest>,
+) -> impl IntoResponse {
+    let deleted_count = state.registry.delete_history_items(&payload.ids);
+    Json(serde_json::json!({ "deletedCount": deleted_count }))
+}
+
+async fn clear_history_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    state.registry.clear_history();
+    StatusCode::OK
+}
+
+async fn restore_from_history_handler(
+    AxumPath(id): AxumPath<String>,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    match state.registry.restore_from_history(&id) {
+        Ok(share) => {
+            let dto = format_share_dto(share, &state);
+            Ok(Json(serde_json::json!({ "share": dto })))
+        }
+        Err(err) => Err((StatusCode::BAD_REQUEST, err)),
+    }
+}
+
 pub fn create_app(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/d/:id", get(landing_page_handler))
@@ -551,6 +631,11 @@ pub fn create_app(state: Arc<AppState>) -> Router {
         .route("/api/shares/local", post(add_local_share_handler))
         .route("/api/shares/:id", put(update_share_handler))
         .route("/api/shares/:id", delete(revoke_share_handler))
+        .route("/api/shares/restore", post(restore_share_handler))
+        .route("/api/history", get(list_history_handler))
+        .route("/api/history/delete", post(delete_history_handler))
+        .route("/api/history/clear", post(clear_history_handler))
+        .route("/api/history/restore/:id", post(restore_from_history_handler))
         .route("/api/status", get(status_handler))
         .route("/api/app/focus", post(focus_handler))
         .layer(

@@ -21,6 +21,25 @@ export interface ShareItem {
   fileCount?: number;
 }
 
+export interface HistoryItem {
+  id: string;
+  filePath: string;
+  originalName: string;
+  title: string;
+  description: string;
+  size: number;
+  mimeType: string;
+  createdAt: string;
+  lastSharedAt: string;
+  directDownload: boolean;
+  isDirectory?: boolean;
+  fileCount?: number;
+  fileExists: boolean;
+  isActive: boolean;
+  activeShareId?: string;
+  thumbnailUrl: string;
+}
+
 export interface TunnelStatus {
   status: 'offline' | 'starting' | 'online' | 'error';
   publicUrl: string | null;
@@ -114,6 +133,20 @@ export async function revokeShare(id: string): Promise<boolean> {
   return res.ok;
 }
 
+export async function restoreShare(item: ShareItem): Promise<ShareItem> {
+  if (isTauri) {
+    return await invoke<ShareItem>('restore_share', { item });
+  }
+  const res = await fetch('http://localhost:3030/api/shares/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to restore share');
+  return data.share;
+}
+
 export async function shortenShareUrl(id: string): Promise<string> {
   if (isTauri) {
     return await invoke<string>('shorten_share_url', { id });
@@ -202,4 +235,44 @@ export async function getPendingShares(): Promise<string[]> {
     return await invoke<string[]>('get_pending_shares');
   }
   return [];
+}
+
+export async function listHistory(): Promise<HistoryItem[]> {
+  if (isTauri) {
+    return await invoke<HistoryItem[]>('list_history');
+  }
+  const res = await fetch('http://localhost:3030/api/history');
+  const data = await res.json();
+  return data.history || [];
+}
+
+export async function deleteHistoryItems(ids: string[]): Promise<number> {
+  if (isTauri) {
+    return await invoke<number>('delete_history_items', { ids });
+  }
+  const res = await fetch('http://localhost:3030/api/history/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+  const data = await res.json();
+  return data.deletedCount || 0;
+}
+
+export async function clearHistory(): Promise<boolean> {
+  if (isTauri) {
+    return await invoke<boolean>('clear_history');
+  }
+  const res = await fetch('http://localhost:3030/api/history/clear', { method: 'POST' });
+  return res.ok;
+}
+
+export async function restoreFromHistory(id: string): Promise<ShareItem> {
+  if (isTauri) {
+    return await invoke<ShareItem>('restore_from_history', { id });
+  }
+  const res = await fetch(`http://localhost:3030/api/history/restore/${id}`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to restore file');
+  return data.share;
 }

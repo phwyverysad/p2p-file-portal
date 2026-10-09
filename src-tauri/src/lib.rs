@@ -298,6 +298,7 @@ pub fn run() {
             commands::add_local_share,
             commands::update_share,
             commands::revoke_share,
+            commands::restore_share,
             commands::shorten_share_url,
             commands::get_status,
             commands::get_app_settings,
@@ -308,6 +309,10 @@ pub fn run() {
             commands::retry_tunnel,
             commands::get_pending_shares,
             commands::copy_to_clipboard,
+            commands::list_history,
+            commands::delete_history_items,
+            commands::clear_history,
+            commands::restore_from_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

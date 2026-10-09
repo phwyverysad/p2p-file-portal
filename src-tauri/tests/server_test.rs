@@ -84,7 +84,22 @@ async fn test_landing_page_and_download_routes() {
         .uri(format!("/thumbnail/{}", share.id))
         .body(axum::body::Body::empty())
         .unwrap();
-    let thumb_resp = app.oneshot(thumb_req).await.unwrap();
+    let thumb_resp = app.clone().oneshot(thumb_req).await.unwrap();
     // archive.zip thumbnail is either 200 (if shell generates icon) or 404
     assert!(thumb_resp.status() == StatusCode::OK || thumb_resp.status() == StatusCode::NOT_FOUND);
+
+    // 5. Test revoking and then restoring via POST /api/shares/restore
+    registry.revoke(&share.id);
+    assert!(registry.get(&share.id).is_none());
+
+    let restore_body = serde_json::to_vec(&share).unwrap();
+    let restore_req = Request::builder()
+        .method("POST")
+        .uri("/api/shares/restore")
+        .header("Content-Type", "application/json")
+        .body(axum::body::Body::from(restore_body))
+        .unwrap();
+    let restore_resp = app.oneshot(restore_req).await.unwrap();
+    assert_eq!(restore_resp.status(), StatusCode::OK);
+    assert!(registry.get(&share.id).is_some());
 }

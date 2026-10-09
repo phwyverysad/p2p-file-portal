@@ -8,15 +8,20 @@
   import EditModal from './components/EditModal.svelte';
   import DeleteModal from './components/DeleteModal.svelte';
   import Toast from './components/Toast.svelte';
+  import HistoryModal from './components/HistoryModal.svelte';
 
   import { 
     type ShareItem, 
+    type HistoryItem,
     type AppSettings, 
     type ServerStatus,
     listShares, 
+    listHistory,
     addLocalShare, 
     updateShare, 
     revokeShare, 
+    restoreShare,
+    restoreFromHistory,
     getStatus, 
     getAppSettings, 
     saveAppSettings,
@@ -42,21 +47,31 @@
 
   // Modals state
   let isSettingsOpen = false;
+  let isHistoryOpen = false;
   let isEditOpen = false;
   let isDeleteOpen = false;
+  let historyCount = 0;
   let activeEditItem: ShareItem | null = null;
   let activeDeleteItem: ShareItem | null = null;
 
   // Toast
   let toastMessage = '';
   let toastVisible = false;
+  let toastActionText: string | undefined = undefined;
+  let toastOnAction: (() => void) | undefined = undefined;
   let toastTimer: any = null;
 
-  function showToast(msg: string) {
+  function showToast(msg: string, actionText?: string, onAction?: () => void, duration = 2800) {
     toastMessage = msg;
+    toastActionText = actionText;
+    toastOnAction = onAction;
     toastVisible = true;
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastVisible = false, 2800);
+    toastTimer = setTimeout(() => {
+      toastVisible = false;
+      toastActionText = undefined;
+      toastOnAction = undefined;
+    }, duration);
   }
 
   async function loadData() {
@@ -65,10 +80,12 @@
         listShares(),
         getStatus(),
         getAppSettings(),
+        listHistory().catch(() => [] as HistoryItem[]),
       ]);
       shares = sh;
       serverStatus = st;
       settings = set;
+      historyCount = Array.isArray(hist) ? hist.length : 0;
     } catch (err) {
       console.error('Initial load error:', err);
     }
@@ -80,6 +97,7 @@
     try {
       const newItem = await addLocalShare(path, title);
       shares = [newItem, ...shares.filter(s => s.id !== newItem.id)];
+      historyCount += 1;
       if (settings.autoCopy) {
         const link = newItem.shortUrl || newItem.publicUrl;
         await copyToClipboard(link);
@@ -99,6 +117,7 @@
   function handleExternalShare(newItem: ShareItem) {
     if (!newItem || !newItem.id) return;
     shares = [newItem, ...shares.filter(s => s.id !== newItem.id)];
+    historyCount += 1;
     if (settings.autoCopy) {
       const link = newItem.shortUrl || newItem.publicUrl;
       copyToClipboard(link);
@@ -106,6 +125,11 @@
     } else {
       showToast(I18N[settings.language].toastFileAdded);
     }
+  }
+
+  async function handleRestoreFromHistory(item: HistoryItem) {
+    const restored = await restoreFromHistory(item.id);
+    shares = [restored, ...shares.filter(s => s.id !== restored.id)];
   }
 
   function handleTunnelStatusUpdate(payload: any) {
@@ -160,9 +184,29 @@
         settings.confirmDelete = false;
         await saveAppSettings(settings);
       }
+      const itemToDelete = shares.find(s => s.id === id);
       await revokeShare(id);
       shares = shares.filter(s => s.id !== id);
-      showToast(I18N[settings.language].toastRevoked);
+
+      if (itemToDelete) {
+        showToast(
+          I18N[settings.language].toastRevoked,
+          I18N[settings.language].btnUndo,
+          async () => {
+            try {
+              const restored = await restoreShare(itemToDelete);
+              shares = [restored, ...shares.filter(s => s.id !== restored.id)];
+              toastVisible = false;
+              showToast(I18N[settings.language].toastRestored);
+            } catch (err) {
+              console.error('Failed to undo delete:', err);
+            }
+          },
+          6000
+        );
+      } else {
+        showToast(I18N[settings.language].toastRevoked);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -389,18 +433,40 @@
   </div>
 {/if}
 
-<!-- FLOATING GEAR BUTTON (Bottom-Left) -->
-<button 
-  type="button" 
-  class="floating-settings-btn" 
-  on:click={() => isSettingsOpen = true}
-  title="Settings"
->
-  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="3"></circle>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-  </svg>
-</button>
+<!-- FLOATING CONTROLS (Bottom-Left) -->
+<div class="fixed bottom-6 left-6 z-40 flex items-center gap-2.5">
+  <!-- Settings Button -->
+  <button 
+    type="button" 
+    class="floating-circle-btn settings" 
+    on:click={() => isSettingsOpen = true}
+    title={I18N[settings.language].settingsTitle}
+  >
+    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
+
+  <!-- History Button (Bottom-Left) -->
+  <button 
+    type="button" 
+    class="floating-circle-btn" 
+    on:click={() => isHistoryOpen = true}
+    title={I18N[settings.language].historyTitle}
+  >
+    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+      <path d="M12 7v5l4 2"/>
+    </svg>
+    {#if historyCount > 0}
+      <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-sky-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-2xs">
+        {historyCount > 99 ? '99+' : historyCount}
+      </span>
+    {/if}
+  </button>
+</div>
 
 <!-- Modals -->
 <SettingsModal 
@@ -409,6 +475,15 @@
   {serverStatus} 
   onClose={() => isSettingsOpen = false} 
   onSaveSettings={handleSaveSettings} 
+/>
+
+<HistoryModal 
+  isOpen={isHistoryOpen} 
+  lang={settings.language} 
+  onClose={() => isHistoryOpen = false} 
+  onRestore={handleRestoreFromHistory} 
+  onShowToast={showToast} 
+  onHistoryCountChanged={(c) => historyCount = c} 
 />
 
 <EditModal 
@@ -427,4 +502,9 @@
   onConfirm={handleConfirmDelete} 
 />
 
-<Toast message={toastMessage} visible={toastVisible} />
+<Toast 
+  message={toastMessage} 
+  visible={toastVisible} 
+  actionText={toastActionText} 
+  onAction={toastOnAction} 
+/>

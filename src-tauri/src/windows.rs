@@ -318,11 +318,70 @@ mod thumbnail {
             }
         }
 
+        // Auto-crop transparent borders if icon is padded inside a large canvas (e.g. 32x32 icon on 256x256 shell bitmap)
+        let (final_buf, final_w, final_h) = if has_non_zero_alpha {
+            let mut min_x = width;
+            let mut max_x = 0;
+            let mut min_y = height;
+            let mut max_y = 0;
+            let mut found_content = false;
+
+            for y in 0..height {
+                for x in 0..width {
+                    let idx = ((y * width + x) * 4) as usize;
+                    let alpha = buf[idx + 3];
+                    if alpha > 15 {
+                        if x < min_x { min_x = x; }
+                        if x > max_x { max_x = x; }
+                        if y < min_y { min_y = y; }
+                        if y > max_y { max_y = y; }
+                        found_content = true;
+                    }
+                }
+            }
+
+            if found_content {
+                let content_w = max_x - min_x + 1;
+                let content_h = max_y - min_y + 1;
+
+                if content_w <= (width * 92) / 100 || content_h <= (height * 92) / 100 {
+                    let pad_x = (((content_w as f32) * 0.05).ceil() as i32).max(2);
+                    let pad_y = (((content_h as f32) * 0.05).ceil() as i32).max(2);
+
+                    let x0 = (min_x - pad_x).max(0);
+                    let y0 = (min_y - pad_y).max(0);
+                    let x1 = (max_x + pad_x).min(width - 1);
+                    let y1 = (max_y + pad_y).min(height - 1);
+
+                    let crop_w = (x1 - x0 + 1) as usize;
+                    let crop_h = (y1 - y0 + 1) as usize;
+
+                    if crop_w > 0 && crop_h > 0 {
+                        let mut cropped = Vec::with_capacity(crop_w * crop_h * 4);
+                        for y in y0..=y1 {
+                            let row_start = ((y * width + x0) * 4) as usize;
+                            let row_end = row_start + (crop_w * 4);
+                            cropped.extend_from_slice(&buf[row_start..row_end]);
+                        }
+                        (cropped, crop_w as u32, crop_h as u32)
+                    } else {
+                        (buf, width as u32, height as u32)
+                    }
+                } else {
+                    (buf, width as u32, height as u32)
+                }
+            } else {
+                (buf, width as u32, height as u32)
+            }
+        } else {
+            (buf, width as u32, height as u32)
+        };
+
         let mut png_bytes = Vec::new();
         let res = image::codecs::png::PngEncoder::new(&mut png_bytes).write_image(
-            &buf,
-            width as u32,
-            height as u32,
+            &final_buf,
+            final_w,
+            final_h,
             image::ExtendedColorType::Rgba8,
         );
 

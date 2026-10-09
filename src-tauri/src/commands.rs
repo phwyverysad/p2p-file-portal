@@ -61,6 +61,16 @@ pub fn revoke_share(state: State<'_, TauriAppState>, id: String) -> Result<bool,
     Ok(state.server_state.registry.revoke(&id))
 }
 
+// 4b. Restore share (Undo deletion)
+#[tauri::command]
+pub fn restore_share(
+    state: State<'_, TauriAppState>,
+    item: crate::registry::ShareItem,
+) -> Result<ShareItemDto, String> {
+    let restored = state.server_state.registry.restore(item);
+    Ok(format_share_dto(restored, &state.server_state))
+}
+
 // 5. Shorten public URL
 #[tauri::command]
 pub async fn shorten_share_url(
@@ -184,4 +194,43 @@ pub fn get_pending_shares(state: State<'_, TauriAppState>) -> Vec<String> {
 #[tauri::command]
 pub fn copy_to_clipboard(text: String) -> Result<(), String> {
     windows::set_clipboard_text(&text)
+}
+
+// 14. List history
+#[tauri::command]
+pub fn list_history(
+    state: State<'_, TauriAppState>,
+) -> Result<Vec<crate::server::HistoryItemDto>, String> {
+    let items = state.server_state.registry.list_history();
+    let dtos = items
+        .into_iter()
+        .map(|it| crate::server::format_history_dto(it, &state.server_state))
+        .collect();
+    Ok(dtos)
+}
+
+// 15. Delete history items
+#[tauri::command]
+pub fn delete_history_items(
+    state: State<'_, TauriAppState>,
+    ids: Vec<String>,
+) -> Result<usize, String> {
+    Ok(state.server_state.registry.delete_history_items(&ids))
+}
+
+// 16. Clear all history
+#[tauri::command]
+pub fn clear_history(state: State<'_, TauriAppState>) -> Result<bool, String> {
+    state.server_state.registry.clear_history();
+    Ok(true)
+}
+
+// 17. Restore share from history
+#[tauri::command]
+pub fn restore_from_history(
+    state: State<'_, TauriAppState>,
+    id: String,
+) -> Result<ShareItemDto, String> {
+    let restored = state.server_state.registry.restore_from_history(&id)?;
+    Ok(format_share_dto(restored, &state.server_state))
 }

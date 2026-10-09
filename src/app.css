@@ -260,6 +260,33 @@ body {
   transform: scale(0.97) translateY(0);
 }
 
+.floating-circle-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.floating-circle-btn:hover {
+  color: #0284c7;
+  border-color: #bae6fd;
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.18);
+  transform: translateY(-2px);
+}
+
+.floating-circle-btn.settings:hover {
+  transform: translateY(-2px) rotate(30deg);
+}
+
 .floating-settings-btn {
   position: fixed;
   bottom: 24px;
