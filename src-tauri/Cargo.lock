@@ -1351,6 +1351,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f9e3d69d39e4862ffed03ed071a76f9a13ba1d9109d355b0f0aa6b15e393c4"
 dependencies = [
  "futures-core",
+ "futures-sink",
 ]
 
 [[package]]
@@ -2393,38 +2394,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 
 [[package]]
-name = "local-file-sharer"
-version = "1.0.0"
-dependencies = [
- "async_zip",
- "axum",
- "chrono",
- "dirs",
- "futures-util",
- "image",
- "local-ip-address",
- "mime_guess",
- "open",
- "rand 0.8.8",
- "regex",
- "reqwest 0.12.28",
- "rfd",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tempfile",
- "tokio",
- "tokio-util",
- "tower",
- "tower-http 0.5.2",
- "winreg 0.52.0",
-]
-
-[[package]]
 name = "local-ip-address"
 version = "0.6.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2975,6 +2944,38 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c45bb4a6ae1280ec0803b1ef9d3455eb50f01efbbe1447ab020f1d54fba9d8"
 
 [[package]]
+name = "p2p-file-portal"
+version = "1.0.1"
+dependencies = [
+ "async_zip",
+ "axum",
+ "chrono",
+ "dirs",
+ "futures-util",
+ "image",
+ "local-ip-address",
+ "mime_guess",
+ "open",
+ "rand 0.8.8",
+ "regex",
+ "reqwest 0.12.28",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tower-http 0.5.2",
+ "winreg 0.52.0",
+]
+
+[[package]]
 name = "pango"
 version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3489,7 +3490,9 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "encoding_rs",
+ "futures-channel",
  "futures-core",
+ "futures-util",
  "h2",
  "http",
  "http-body",

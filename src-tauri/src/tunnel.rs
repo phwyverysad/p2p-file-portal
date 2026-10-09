@@ -37,7 +37,23 @@ pub fn find_cloudflared_binary() -> Option<PathBuf> {
         }
     }
 
-    // 3. Fallback to PATH
+    // 3. Check AppData local directory or extract embedded copy
+    if let Some(data_dir) = dirs::data_local_dir() {
+        let app_bin = data_dir.join("FileSharer").join("bin").join("cloudflared.exe");
+        if app_bin.exists() {
+            return Some(app_bin);
+        }
+        // Extract embedded cloudflared binary if not on disk
+        if let Some(parent) = app_bin.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        static EMBEDDED_CLOUDFLARED: &[u8] = include_bytes!("../resources/cloudflared.exe");
+        if std::fs::write(&app_bin, EMBEDDED_CLOUDFLARED).is_ok() {
+            return Some(app_bin);
+        }
+    }
+
+    // 4. Fallback to PATH
     if let Ok(output) = std::process::Command::new("where.exe")
         .arg("cloudflared.exe")
         .output()

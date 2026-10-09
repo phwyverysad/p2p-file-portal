@@ -513,6 +513,20 @@ async fn focus_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse 
     StatusCode::OK
 }
 
+async fn version_handler() -> impl IntoResponse {
+    Json(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION")
+    }))
+}
+
+async fn terminate_handler() -> impl IntoResponse {
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        std::process::exit(0);
+    });
+    StatusCode::OK
+}
+
 async fn update_share_handler(
     AxumPath(id): AxumPath<String>,
     State(state): State<Arc<AppState>>,
@@ -668,6 +682,8 @@ pub fn create_app(state: Arc<AppState>) -> Router {
         .route("/api/history/restore/:id", post(restore_from_history_handler))
         .route("/api/status", get(status_handler))
         .route("/api/app/focus", post(focus_handler))
+        .route("/api/app/version", get(version_handler))
+        .route("/api/app/terminate", post(terminate_handler))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)

@@ -3,7 +3,7 @@ export type Language = 'th' | 'en';
 
 export const I18N = {
   th: {
-    appTitle: 'File Sharer',
+    appTitle: 'P2P File Portal',
     headerShare: 'แชร์ไฟล์และโฟลเดอร์',
     statusOnline: 'ออนไลน์',
     statusPublic: 'ออนไลน์',
@@ -101,7 +101,7 @@ export const I18N = {
     confirmDeleteHistory: 'ต้องการลบประวัติที่เลือกใช่หรือไม่?',
   },
   en: {
-    appTitle: 'File Sharer',
+    appTitle: 'P2P File Portal',
     headerShare: 'Share Files & Folders',
     statusOnline: 'Online',
     statusPublic: 'Online',

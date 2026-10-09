@@ -13,10 +13,16 @@ uploads/
 *.log
 .worktrees/
 worktrees/
-bin/
+/bin/
 src-tauri/gen/
 
 # Tauri & OS artifacts
 src-tauri/target/
 .DS_Store
 Thumbs.db
+
+# Excluded from main repo
+docs/
+tests/
+src-tauri/tests/
+.gemini/

@@ -41,46 +41,114 @@ fn try_forward_to_running_instance() -> bool {
     let _ = stream.set_read_timeout(Some(Duration::from_millis(1000)));
     let _ = stream.set_write_timeout(Some(Duration::from_millis(1000)));
 
-    // Collect file arguments
+    // Check version of running instance
+    let check_req = "GET /api/app/version HTTP/1.1\r\nHost: 127.0.0.1:3030\r\nConnection: close\r\n\r\n";
+    let _ = stream.write_all(check_req.as_bytes());
+    let _ = stream.flush();
+    let mut resp_buf = [0u8; 1024];
+    let n = stream.read(&mut resp_buf).unwrap_or(0);
+    let resp_str = String::from_utf8_lossy(&resp_buf[..n]);
+
+    let current_version = env!("CARGO_PKG_VERSION");
+    let mut is_older_version = false;
+
+    if resp_str.contains("404 Not Found") {
+        // Older build without /api/app/version is definitely older!
+        is_older_version = true;
+    } else if let Some(idx) = resp_str.find("\"version\":") {
+        let remainder = &resp_str[idx + 10..];
+        if let Some(start) = remainder.find('"') {
+            let ver_sub = &remainder[start + 1..];
+            if let Some(end) = ver_sub.find('"') {
+                let running_ver = &ver_sub[..end];
+                if running_ver != current_version {
+                    is_older_version = true;
+                }
+            }
+        }
+    }
+
+    if is_older_version {
+        // Cleanly terminate old instance so new version can take over
+        if let Ok(mut term_stream) = TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(250)) {
+            let term_req = "POST /api/app/terminate HTTP/1.1\r\nHost: 127.0.0.1:3030\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            let _ = term_stream.write_all(term_req.as_bytes());
+            let _ = term_stream.flush();
+        }
+
+        // On Windows, also force-kill older processes (excluding current process ID)
+        let my_pid = std::process::id();
+        #[cfg(windows)]
+        {
+            let _ = std::process::Command::new("taskkill")
+                .args(["/F", "/IM", "local-file-sharer.exe", "/FI", &format!("PID ne {}", my_pid)])
+                .output();
+            let _ = std::process::Command::new("taskkill")
+                .args(["/F", "/IM", "p2p-file-portal.exe", "/FI", &format!("PID ne {}", my_pid)])
+                .output();
+            let _ = std::process::Command::new("taskkill")
+                .args(["/F", "/IM", "P2PFilePortal.exe", "/FI", &format!("PID ne {}", my_pid)])
+                .output();
+        }
+
+        // Wait up to 1.5 seconds for port 3030 to free up
+        for _ in 0..15 {
+            std::thread::sleep(Duration::from_millis(100));
+            if TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(50)).is_err() {
+                break;
+            }
+        }
+
+        // Auto-update installed binary if running from a different folder (e.g. Downloads)
+        if let Some(local_app_data) = dirs::data_local_dir() {
+            let install_dir = local_app_data.join("Programs").join("P2PFilePortal");
+            let installed_exe = install_dir.join("P2PFilePortal.exe");
+            if installed_exe.exists() {
+                if let Ok(cur_exe) = std::env::current_exe() {
+                    if cur_exe != installed_exe {
+                        let _ = std::fs::copy(&cur_exe, &installed_exe);
+                    }
+                }
+            }
+        }
+
+        // Return false so current new instance continues running!
+        return false;
+    }
+
+    // Same version already running: forward arguments or focus and exit
     let mut files = Vec::new();
     for arg in std::env::args().skip(1) {
         let p = std::path::Path::new(&arg);
-        if p.exists() && p.is_file() {
+        if p.exists() && (p.is_file() || p.is_dir()) {
             files.push(arg);
         }
     }
 
     if files.is_empty() {
-        let req = "POST /api/app/focus HTTP/1.1\r\nHost: 127.0.0.1:3030\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
-        let _ = stream.write_all(req.as_bytes());
-        let _ = stream.flush();
-        let mut buf = [0u8; 128];
-        let _ = stream.read(&mut buf);
+        if let Ok(mut focus_stream) = TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(250)) {
+            let req = "POST /api/app/focus HTTP/1.1\r\nHost: 127.0.0.1:3030\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            let _ = focus_stream.write_all(req.as_bytes());
+            let _ = focus_stream.flush();
+        }
         return true;
     }
 
-    let mut current_stream = Some(stream);
     for file in files {
-        let mut s = if let Some(first) = current_stream.take() {
-            first
-        } else {
-            let Ok(new_s) = TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(250)) else {
-                return false;
-            };
-            new_s
-        };
-        let _ = s.set_read_timeout(Some(Duration::from_millis(1000)));
-        let _ = s.set_write_timeout(Some(Duration::from_millis(1000)));
-        let body = serde_json::json!({ "filePath": file }).to_string();
-        let req = format!(
-            "POST /api/shares/local HTTP/1.1\r\nHost: 127.0.0.1:3030\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        let _ = s.write_all(req.as_bytes());
-        let _ = s.flush();
-        let mut buf = [0u8; 256];
-        let _ = s.read(&mut buf);
+        if let Ok(mut s) = TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(250)) {
+            let _ = s.set_read_timeout(Some(Duration::from_millis(1000)));
+            let _ = s.set_write_timeout(Some(Duration::from_millis(1000)));
+            let body = serde_json::json!({ "filePath": file }).to_string();
+            let req = format!(
+                "POST /api/shares/local HTTP/1.1\r\nHost: 127.0.0.1:3030\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            let _ = s.write_all(req.as_bytes());
+            let _ = s.flush();
+            let mut buf = [0u8; 256];
+            let _ = s.read(&mut buf);
+        }
     }
 
     true
