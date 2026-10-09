@@ -15,6 +15,7 @@ export interface ShareItem {
   shortUrl: string | null;
   publicUrl: string;
   localUrl: string;
+  thumbnailUrl?: string;
   directDownload?: boolean;
   isDirectory?: boolean;
   fileCount?: number;

@@ -187,6 +187,7 @@ pub fn run() {
         settings: Some(app_settings_arc.clone()),
         on_share_added,
         on_focus_requested,
+        thumbnail_cache: Arc::new(RwLock::new(std::collections::HashMap::new())),
     });
 
     let tauri_state = TauriAppState {

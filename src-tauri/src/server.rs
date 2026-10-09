@@ -25,6 +25,7 @@ pub struct AppState {
     pub settings: Option<Arc<RwLock<crate::settings::AppSettings>>>,
     pub on_share_added: Option<ShareNotifier>,
     pub on_focus_requested: Option<FocusNotifier>,
+    pub thumbnail_cache: Arc<RwLock<std::collections::HashMap<String, Option<Vec<u8>>>>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -34,6 +35,7 @@ pub struct ShareItemDto {
     pub item: ShareItem,
     pub public_url: String,
     pub local_url: String,
+    pub thumbnail_url: String,
 }
 
 #[derive(Serialize)]
@@ -98,11 +100,13 @@ pub fn format_share_dto(item: ShareItem, state: &AppState) -> ShareItemDto {
     let lan_ip = get_local_ip();
     let local_url = format!("http://{}:{}/d/{}", lan_ip, state.port, item.id);
     let public_url = format!("{}/d/{}", public_base, item.id);
+    let thumbnail_url = format!("http://127.0.0.1:{}/thumbnail/{}", state.port, item.id);
 
     ShareItemDto {
         item,
         public_url,
         local_url,
+        thumbnail_url,
     }
 }
 
@@ -126,6 +130,7 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
     };
     let download_url = format!("{}/api/download/{}", base_url, share.id);
     let page_url = format!("{}/d/{}", base_url, share.id);
+    let thumbnail_url = format!("{}/thumbnail/{}", base_url, share.id);
 
     let icon_svg = if share.is_directory {
         r#"<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -198,8 +203,8 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
       text-align: center;
     }}
     .icon-box {{
-      width: 72px;
-      height: 72px;
+      width: 76px;
+      height: 76px;
       border-radius: 20px;
       background: #f0f9ff;
       border: 1px solid #bae6fd;
@@ -209,6 +214,23 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
       justify-content: center;
       margin-bottom: 20px;
       box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+      overflow: hidden;
+      padding: 6px;
+      position: relative;
+    }}
+    .item-thumb {{
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 14px;
+      display: block;
+    }}
+    .fallback-icon {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
     }}
     .title {{
       font-size: 20px;
@@ -266,7 +288,10 @@ pub fn generate_landing_html(share: &ShareItem, base_url: &str) -> String {
 <body>
   <div class="card">
     <div class="icon-box">
-      {icon_svg}
+      <img src="{thumbnail_url}" alt="" class="item-thumb" onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='flex';" />
+      <div id="fallback-icon" class="fallback-icon" style="display: none;">
+        {icon_svg}
+      </div>
     </div>
     <h1 class="title">{title}</h1>
     <p class="orig-name">{original_name}</p>
@@ -473,9 +498,54 @@ async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
     Json(resp)
 }
 
+async fn thumbnail_handler(
+    AxumPath(id): AxumPath<String>,
+    State(state): State<Arc<AppState>>,
+) -> Response {
+    if let Some(cached) = state.thumbnail_cache.read().unwrap().get(&id) {
+        return match cached {
+            Some(bytes) => (
+                StatusCode::OK,
+                [
+                    (header::CONTENT_TYPE, "image/png"),
+                    (header::CACHE_CONTROL, "public, max-age=86400"),
+                ],
+                bytes.clone(),
+            )
+                .into_response(),
+            None => (StatusCode::NOT_FOUND, "Thumbnail not found").into_response(),
+        };
+    }
+
+    if let Some(share) = state.registry.get(&id) {
+        let thumb = crate::windows::get_file_thumbnail(&share.file_path, 256);
+        state
+            .thumbnail_cache
+            .write()
+            .unwrap()
+            .insert(id.clone(), thumb.clone());
+
+        if let Some(bytes) = thumb {
+            return (
+                StatusCode::OK,
+                [
+                    (header::CONTENT_TYPE, "image/png"),
+                    (header::CACHE_CONTROL, "public, max-age=86400"),
+                ],
+                bytes,
+            )
+                .into_response();
+        }
+    }
+
+    (StatusCode::NOT_FOUND, "Thumbnail not found").into_response()
+}
+
 pub fn create_app(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/d/:id", get(landing_page_handler))
+        .route("/thumbnail/:id", get(thumbnail_handler))
+        .route("/api/shares/:id/thumbnail", get(thumbnail_handler))
         .route("/api/download/:id", get(download_handler))
         .route("/api/shares", get(list_shares_handler))
         .route("/api/shares/local", post(add_local_share_handler))

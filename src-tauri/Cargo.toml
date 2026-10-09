@@ -35,6 +35,7 @@ open = "5.3"
 dirs = "7.0"
 rfd = "0.16"
 async_zip = { version = "0.0.19", features = ["deflate", "tokio"] }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

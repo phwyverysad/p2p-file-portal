@@ -30,6 +30,7 @@ async fn test_landing_page_and_download_routes() {
         settings: None,
         on_share_added: None,
         on_focus_requested: None,
+        thumbnail_cache: Arc::new(RwLock::new(std::collections::HashMap::new())),
     });
 
     let app = create_app(state);
@@ -75,6 +76,15 @@ async fn test_landing_page_and_download_routes() {
         .uri("/d/f_nonexistent")
         .body(axum::body::Body::empty())
         .unwrap();
-    let nf_resp = app.oneshot(not_found_req).await.unwrap();
+    let nf_resp = app.clone().oneshot(not_found_req).await.unwrap();
     assert_eq!(nf_resp.status(), StatusCode::NOT_FOUND);
+
+    // 4. Test thumbnail route GET /thumbnail/:id
+    let thumb_req = Request::builder()
+        .uri(format!("/thumbnail/{}", share.id))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let thumb_resp = app.oneshot(thumb_req).await.unwrap();
+    // archive.zip thumbnail is either 200 (if shell generates icon) or 404
+    assert!(thumb_resp.status() == StatusCode::OK || thumb_resp.status() == StatusCode::NOT_FOUND);
 }
