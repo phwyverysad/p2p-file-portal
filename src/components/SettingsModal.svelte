@@ -107,10 +107,7 @@
         <!-- Windows Context Menu -->
         <div class="flex items-center justify-between gap-4 py-1">
           <div>
-            <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <span>{t.settingContextMenu}</span>
-              <span class="badge text-[10px] bg-sky-50 text-sky-700 border-sky-200">Windows Shell</span>
-            </div>
+            <div class="text-xs font-bold text-slate-800">{t.settingContextMenu}</div>
             <div class="text-[11px] text-slate-500 mt-0.5">{t.settingContextMenuDesc}</div>
           </div>
           <label class="toggle-switch shrink-0">
