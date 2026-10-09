@@ -247,9 +247,20 @@ mod thumbnail {
         ) -> usize;
         fn DestroyIcon(hIcon: *mut std::ffi::c_void) -> i32;
         fn GetIconInfo(hIcon: *mut std::ffi::c_void, piconinfo: *mut ICONINFO) -> i32;
+        fn PrivateExtractIconsW(
+            szFileName: *const u16,
+            nIconIndex: i32,
+            cxIcon: i32,
+            cyIcon: i32,
+            phicon: *mut *mut std::ffi::c_void,
+            piconid: *mut u32,
+            nIcons: u32,
+            flags: u32,
+        ) -> u32;
     }
 
     const SIIGBF_BIGGERSIZEOK: u32 = 0x01;
+    const SIIGBF_THUMBNAILONLY: u32 = 0x08;
     const SHGFI_ICON: u32 = 0x000000100;
     const SHGFI_LARGEICON: u32 = 0x000000000;
     const DIB_RGB_COLORS: u32 = 0;
@@ -258,7 +269,7 @@ mod thumbnail {
         0x79, 0x8b, 0xc1, 0xbc, 0x16, 0xba, 0x2f, 0x44, 0x80, 0xc4, 0x8a, 0x59, 0xc3, 0x0c, 0x46, 0x3b,
     ];
 
-    unsafe fn hbitmap_to_png(hbm: *mut std::ffi::c_void) -> Option<Vec<u8>> {
+    pub(crate) unsafe fn hbitmap_to_png(hbm: *mut std::ffi::c_void) -> Option<Vec<u8>> {
         if hbm.is_null() {
             return None;
         }
@@ -392,7 +403,7 @@ mod thumbnail {
         }
     }
 
-    unsafe fn hicon_to_png(hicon: *mut std::ffi::c_void) -> Option<Vec<u8>> {
+    pub(crate) unsafe fn hicon_to_png(hicon: *mut std::ffi::c_void) -> Option<Vec<u8>> {
         if hicon.is_null() {
             return None;
         }
@@ -425,6 +436,9 @@ mod thumbnail {
         unsafe {
             let _ = CoInitializeEx(ptr::null_mut(), 0x02);
 
+            // Step 1: Query authentic visual thumbnail (for photos, images, videos, PDFs)
+            // SIIGBF_THUMBNAILONLY ensures Windows returns ONLY real image thumbnails and does NOT
+            // generate fake "document plates" with microscopic icons in the center!
             let mut factory_ptr: *mut std::ffi::c_void = ptr::null_mut();
             let hr = SHCreateItemFromParsingName(
                 wide.as_ptr(),
@@ -440,7 +454,7 @@ mod thumbnail {
                     cx: target_size as i32,
                     cy: target_size as i32,
                 };
-                let get_img_hr = ((*(*factory).lpVtbl).GetImage)(factory_ptr, size, SIIGBF_BIGGERSIZEOK, &mut hbm);
+                let get_img_hr = ((*(*factory).lpVtbl).GetImage)(factory_ptr, size, SIIGBF_THUMBNAILONLY, &mut hbm);
                 ((*(*factory).lpVtbl).Release)(factory_ptr);
 
                 if get_img_hr == 0 && !hbm.is_null() {
@@ -452,6 +466,30 @@ mod thumbnail {
                 }
             }
 
+            // Step 2: Try PrivateExtractIconsW to get true high-resolution icon (up to 256x256)
+            // from executables (.exe, .dll, etc.) without any surrounding document sheet
+            let mut h_priv_icon: *mut std::ffi::c_void = ptr::null_mut();
+            let mut icon_id: u32 = 0;
+            let n_ext = PrivateExtractIconsW(
+                wide.as_ptr(),
+                0,
+                target_size as i32,
+                target_size as i32,
+                &mut h_priv_icon,
+                &mut icon_id,
+                1,
+                0,
+            );
+            if n_ext > 0 && !h_priv_icon.is_null() {
+                let png = hicon_to_png(h_priv_icon);
+                DestroyIcon(h_priv_icon);
+                if png.is_some() {
+                    return png;
+                }
+            }
+
+            // Step 3: Try SHGetFileInfoW to get the registered shell icon
+            // (e.g. Minecraft block for .mcaddon, archive icon for .zip, document icons, folders, etc.)
             let mut shfi: SHFILEINFOW = std::mem::zeroed();
             let ret = SHGetFileInfoW(
                 wide.as_ptr(),
