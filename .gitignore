@@ -26,3 +26,4 @@ docs/
 tests/
 src-tauri/tests/
 .gemini/
+*.exe

@@ -14,11 +14,14 @@ You can download the latest version from [GitHub Releases](https://github.com/ph
    - No installation required. Runs directly from any location (Desktop, Downloads, USB flash drive).
    - Automatically handles process updates if an older instance was running in the background.
 
-2. **P2P-File-Portal-WebInstaller.exe** (Zero-Click Lightweight Web Installer)
-   - Ultra-small launcher (~3 MB).
-   - Zero-click installation: Launches immediately if already installed; silently fetches and configures the latest release if not installed.
-   - Automatically sets up Desktop and Start Menu shortcuts.
-   - Preserves all your settings, preferences, and share history intact upon update.
+2. **P2P-File-Portal-WebInstaller.exe** (Lightweight Clean GUI Web Installer)
+   - Ultra-small launcher (~3.3 MB).
+   - Clean native Win32 setup window with a modern, smooth progress bar.
+   - Shows real-time download status, percentage, and transferred megabytes.
+   - Interactive destination folder selection and customizable shortcut options.
+   - Bilingual support with on-the-fly English / Thai toggle.
+   - Zero flashing console windows or intrusive command prompts.
+   - Automatically launches the application and preserves all your settings and share history intact upon update.
 
 ---
 
