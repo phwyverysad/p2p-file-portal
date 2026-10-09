@@ -14,7 +14,7 @@
   $: t = I18N[lang];
 </script>
 
-<section class="card mb-12">
+<section class="card mb-6">
   <div class="flex items-center justify-between mb-4">
     <div class="flex items-center gap-2">
       <h2 class="text-[15px] font-bold text-slate-800">{t.sectionAllFiles}</h2>

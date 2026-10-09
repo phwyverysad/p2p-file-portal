@@ -103,8 +103,8 @@
 
   <!-- Form for manual path input -->
   <form on:submit={handleSubmit} class="space-y-3">
-    <div class="flex gap-2">
-      <div class="relative flex-1">
+    <div class="flex flex-col sm:flex-row gap-2">
+      <div class="relative flex-1 min-w-0">
         <input 
           type="text" 
           bind:value={localPathInput}
@@ -112,39 +112,41 @@
           class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 focus:bg-white text-slate-800 transition-colors font-mono"
           required
         />
-        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
       </div>
-      <button 
-        type="button" 
-        on:click={handleBrowseFile} 
-        title={t.btnBrowse}
-        class="px-2.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-colors flex items-center gap-1 active:scale-95"
-      >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        </svg>
-        <span>{t.btnBrowse}</span>
-      </button>
-      <button 
-        type="button" 
-        on:click={handleBrowseFolder} 
-        title={t.btnBrowseFolder}
-        class="px-2.5 py-2 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-200 transition-colors flex items-center gap-1 active:scale-95"
-      >
-        <svg class="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-        </svg>
-        <span>{t.btnBrowseFolder}</span>
-      </button>
-      <button 
-        type="submit" 
-        disabled={isProcessing || !localPathInput.trim()} 
-        class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-      >
-        <span>{isProcessing ? t.loading : t.btnShare}</span>
-      </button>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button 
+          type="button" 
+          on:click={handleBrowseFile} 
+          title={t.btnBrowse}
+          class="flex-1 sm:flex-initial px-2.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-colors flex items-center justify-center gap-1 active:scale-95"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          </svg>
+          <span>{t.btnBrowse}</span>
+        </button>
+        <button 
+          type="button" 
+          on:click={handleBrowseFolder} 
+          title={t.btnBrowseFolder}
+          class="flex-1 sm:flex-initial px-2.5 py-2 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-200 transition-colors flex items-center justify-center gap-1 active:scale-95"
+        >
+          <svg class="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>{t.btnBrowseFolder}</span>
+        </button>
+        <button 
+          type="submit" 
+          disabled={isProcessing || !localPathInput.trim()} 
+          class="flex-1 sm:flex-initial btn-primary disabled:opacity-50 disabled:cursor-not-allowed justify-center whitespace-nowrap"
+        >
+          <span>{isProcessing ? t.loading : t.btnShare}</span>
+        </button>
+      </div>
     </div>
   </form>
 </section>

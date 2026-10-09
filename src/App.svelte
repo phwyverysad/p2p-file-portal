@@ -394,7 +394,7 @@
   });
 </script>
 
-<main class="container">
+<main class="container mx-auto">
   <Header 
     lang={settings.language} 
     status={serverStatus} 
@@ -433,35 +433,39 @@
   </div>
 {/if}
 
-<!-- FLOATING CONTROLS (Bottom-Left) -->
-<div class="fixed bottom-6 left-6 z-40 flex items-center gap-2.5">
+<!-- FLOATING CONTROLS (Bottom-Left Glass Dock) -->
+<div class="floating-bottom-dock" role="toolbar" aria-label="Controls">
   <!-- Settings Button -->
   <button 
     type="button" 
-    class="floating-circle-btn settings" 
+    class="dock-btn group" 
     on:click={() => isSettingsOpen = true}
     title={I18N[settings.language].settingsTitle}
+    aria-label={I18N[settings.language].settingsTitle}
   >
-    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-45" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="3"></circle>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
     </svg>
   </button>
 
-  <!-- History Button (Bottom-Left) -->
+  <div class="dock-divider"></div>
+
+  <!-- History Button -->
   <button 
     type="button" 
-    class="floating-circle-btn" 
+    class="dock-btn group relative" 
     on:click={() => isHistoryOpen = true}
     title={I18N[settings.language].historyTitle}
+    aria-label={I18N[settings.language].historyTitle}
   >
-    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="w-5 h-5 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
       <path d="M3 3v5h5"/>
       <path d="M12 7v5l4 2"/>
     </svg>
     {#if historyCount > 0}
-      <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-sky-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-2xs">
+      <span class="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-sky-600 text-white text-[9.5px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-2xs animate-scale-up">
         {historyCount > 99 ? '99+' : historyCount}
       </span>
     {/if}
